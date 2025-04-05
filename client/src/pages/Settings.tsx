@@ -422,7 +422,7 @@ const Settings = () => {
                   <CardHeader>
                     <CardTitle>Security Settings</CardTitle>
                     <CardDescription>
-                      Configure your account security and access controls
+                      Configure security settings for your account
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -434,35 +434,32 @@ const Settings = () => {
                             Add an extra layer of security to your account
                           </p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <Switch 
                             id="twoFactorAuth" 
                             checked={securitySettings.twoFactorAuth}
                             onCheckedChange={() => handleSecuritySettingChange('twoFactorAuth')}
                           />
-                          {!securitySettings.twoFactorAuth && (
-                            <Button variant="outline" size="sm" onClick={enableTwoFactor}>
-                              <Lock className="h-4 w-4 mr-2" />
-                              Setup
-                            </Button>
-                          )}
+                          <Button variant="outline" size="sm" onClick={enableTwoFactor}>
+                            Setup
+                          </Button>
                         </div>
                       </div>
                       <Separator />
 
-                      <div className="space-y-2">
-                        <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Time after which you'll be logged out automatically
+                          </p>
+                        </div>
                         <Input 
                           id="sessionTimeout" 
-                          type="number" 
-                          value={securitySettings.sessionTimeout} 
+                          value={securitySettings.sessionTimeout}
                           onChange={handleSessionTimeoutChange}
-                          min="5"
-                          max="120"
+                          className="w-20 text-right"
                         />
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          How long before your session expires due to inactivity
-                        </p>
                       </div>
                       <Separator />
 
@@ -485,7 +482,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="ipRestrictions">IP Restrictions</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Limit access to trusted IP addresses only
+                            Limit access to specific IP addresses
                           </p>
                         </div>
                         <Switch 
@@ -500,7 +497,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="auditLogging">Audit Logging</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Log all actions performed on your account
+                            Enable detailed audit logs for your account activity
                           </p>
                         </div>
                         <Switch 
@@ -525,7 +522,7 @@ const Settings = () => {
                   <CardHeader>
                     <CardTitle>Appearance Settings</CardTitle>
                     <CardDescription>
-                      Customize the look and feel of your dashboard
+                      Personalize how the NKASE dashboard looks and feels
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -534,7 +531,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="darkMode">Dark Mode</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Enable dark theme for the application
+                            Use dark theme throughout the application
                           </p>
                         </div>
                         <Switch 
@@ -549,7 +546,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="compactView">Compact View</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Display more information with less spacing
+                            Use more condensed UI elements to fit more on screen
                           </p>
                         </div>
                         <Switch 
@@ -564,7 +561,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="showResourceIcons">Show Resource Icons</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Display icons next to NKASE resources
+                            Display icons for different resource types
                           </p>
                         </div>
                         <Switch 
@@ -579,7 +576,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="animateCharts">Animate Charts</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Enable chart animations in the dashboard
+                            Enable animations for charts and graphs
                           </p>
                         </div>
                         <Switch 
@@ -594,7 +591,7 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="highContrastMode">High Contrast Mode</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Increase visual contrast for better accessibility
+                            Increase contrast for better accessibility
                           </p>
                         </div>
                         <Switch 
@@ -617,9 +614,9 @@ const Settings = () => {
               <TabsContent value="integrations" className="mt-0">
                 <Card>
                   <CardHeader>
-                    <CardTitle>NKASE Integrations</CardTitle>
+                    <CardTitle>Integration Settings</CardTitle>
                     <CardDescription>
-                      Configure connections to NKASE security services
+                      Configure connections to NKASE and other security services
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -628,17 +625,16 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="nkaseIntegration">NKASE Integration</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Connect to your NKASE environment
+                            Connect to NKASE cloud security services
                           </p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <Switch 
                             id="nkaseIntegration" 
                             checked={integrationSettings.nkaseIntegration}
                             onCheckedChange={() => handleIntegrationChange('nkaseIntegration')}
                           />
                           <Button variant="outline" size="sm" onClick={testNkaseConnection}>
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
                             Test
                           </Button>
                         </div>
@@ -649,14 +645,13 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="guardDuty">NKASE GuardDuty</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Ingest findings from NKASE GuardDuty
+                            Threat detection service that continuously monitors for malicious activity
                           </p>
                         </div>
                         <Switch 
                           id="guardDuty" 
                           checked={integrationSettings.guardDuty}
                           onCheckedChange={() => handleIntegrationChange('guardDuty')}
-                          disabled={!integrationSettings.nkaseIntegration}
                         />
                       </div>
                       <Separator />
@@ -665,30 +660,28 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="securityHub">NKASE Security Hub</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Import findings from NKASE Security Hub
+                            Centralized view of security alerts and compliance status
                           </p>
                         </div>
                         <Switch 
                           id="securityHub" 
                           checked={integrationSettings.securityHub}
                           onCheckedChange={() => handleIntegrationChange('securityHub')}
-                          disabled={!integrationSettings.nkaseIntegration}
                         />
                       </div>
                       <Separator />
 
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <Label htmlFor="cloudTrail">NKASE Cloud Trail</Label>
+                          <Label htmlFor="cloudTrail">NKASE CloudTrail</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Monitor audit events and activities
+                            Service that enables governance, compliance, and audit
                           </p>
                         </div>
                         <Switch 
                           id="cloudTrail" 
                           checked={integrationSettings.cloudTrail}
                           onCheckedChange={() => handleIntegrationChange('cloudTrail')}
-                          disabled={!integrationSettings.nkaseIntegration}
                         />
                       </div>
                       <Separator />
@@ -697,14 +690,13 @@ const Settings = () => {
                         <div className="space-y-0.5">
                           <Label htmlFor="cloudWatch">NKASE CloudWatch</Label>
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Collect metrics and monitoring data
+                            Observability service for resources and applications
                           </p>
                         </div>
                         <Switch 
                           id="cloudWatch" 
                           checked={integrationSettings.cloudWatch}
                           onCheckedChange={() => handleIntegrationChange('cloudWatch')}
-                          disabled={!integrationSettings.nkaseIntegration}
                         />
                       </div>
 
@@ -724,178 +716,177 @@ const Settings = () => {
                     <CardHeader>
                       <CardTitle>Compliance Controls</CardTitle>
                       <CardDescription>
-                        Configure security compliance frameworks and preventative controls
+                        Configure compliance framework settings and controls
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
-                        <h3 className="text-lg font-medium mb-4">Compliance Frameworks</h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="pciDss">PCI DSS</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Payment Card Industry Data Security Standard
-                              </p>
-                            </div>
-                            <Switch 
-                              id="pciDss" 
-                              checked={complianceSettings.pciDss}
-                              onCheckedChange={() => handleComplianceChange('pciDss')}
-                            />
+                        <h3 className="text-lg font-medium">Compliance Frameworks</h3>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="pciDss">PCI DSS</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Payment Card Industry Data Security Standard
+                            </p>
                           </div>
-                          <Separator />
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="hipaa">HIPAA</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Health Insurance Portability and Accountability Act
-                              </p>
-                            </div>
-                            <Switch 
-                              id="hipaa" 
-                              checked={complianceSettings.hipaa}
-                              onCheckedChange={() => handleComplianceChange('hipaa')}
-                            />
-                          </div>
-                          <Separator />
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="nist80053">NIST 800-53</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Security controls for federal information systems
-                              </p>
-                            </div>
-                            <Switch 
-                              id="nist80053" 
-                              checked={complianceSettings.nist80053}
-                              onCheckedChange={() => handleComplianceChange('nist80053')}
-                            />
-                          </div>
-                          <Separator />
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="iso27001">ISO 27001</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                International standard for information security
-                              </p>
-                            </div>
-                            <Switch 
-                              id="iso27001" 
-                              checked={complianceSettings.iso27001}
-                              onCheckedChange={() => handleComplianceChange('iso27001')}
-                            />
-                          </div>
-                          <Separator />
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="gdpr">GDPR</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                General Data Protection Regulation (EU)
-                              </p>
-                            </div>
-                            <Switch 
-                              id="gdpr" 
-                              checked={complianceSettings.gdpr}
-                              onCheckedChange={() => handleComplianceChange('gdpr')}
-                            />
-                          </div>
-                          <Separator />
-
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="soc2">SOC 2</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Service Organization Control 2
-                              </p>
-                            </div>
-                            <Switch 
-                              id="soc2" 
-                              checked={complianceSettings.soc2}
-                              onCheckedChange={() => handleComplianceChange('soc2')}
-                            />
-                          </div>
+                          <Switch 
+                            id="pciDss" 
+                            checked={complianceSettings.pciDss}
+                            onCheckedChange={() => handleComplianceChange('pciDss')}
+                          />
                         </div>
+                        <Separator />
 
-                        <h3 className="text-lg font-medium mt-8 mb-4">Preventative Controls</h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="enableRiskAutomation">Risk Automation</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Automatically detect and classify risk levels
-                              </p>
-                            </div>
-                            <Switch 
-                              id="enableRiskAutomation" 
-                              checked={complianceSettings.enableRiskAutomation}
-                              onCheckedChange={() => handleComplianceChange('enableRiskAutomation')}
-                            />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="hipaa">HIPAA</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Health Insurance Portability and Accountability Act
+                            </p>
                           </div>
-                          <Separator />
+                          <Switch 
+                            id="hipaa" 
+                            checked={complianceSettings.hipaa}
+                            onCheckedChange={() => handleComplianceChange('hipaa')}
+                          />
+                        </div>
+                        <Separator />
 
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="autoRemediation">Auto-Remediation</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Automatically fix common compliance issues
-                              </p>
-                            </div>
-                            <Switch 
-                              id="autoRemediation" 
-                              checked={complianceSettings.autoRemediation}
-                              onCheckedChange={() => handleComplianceChange('autoRemediation')}
-                            />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="nist80053">NIST 800-53</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Security and Privacy Controls for Federal Information Systems
+                            </p>
                           </div>
-                          <Separator />
+                          <Switch 
+                            id="nist80053" 
+                            checked={complianceSettings.nist80053}
+                            onCheckedChange={() => handleComplianceChange('nist80053')}
+                          />
+                        </div>
+                        <Separator />
 
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="requireMfa">Require MFA</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Enforce multi-factor authentication for all users
-                              </p>
-                            </div>
-                            <Switch 
-                              id="requireMfa" 
-                              checked={complianceSettings.requireMfa}
-                              onCheckedChange={() => handleComplianceChange('requireMfa')}
-                            />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="iso27001">ISO 27001</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              International Standard for Information Security Management
+                            </p>
                           </div>
-                          <Separator />
+                          <Switch 
+                            id="iso27001" 
+                            checked={complianceSettings.iso27001}
+                            onCheckedChange={() => handleComplianceChange('iso27001')}
+                          />
+                        </div>
+                        <Separator />
 
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="encryptData">Encrypt Data</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Enforce encryption for all data at rest and in transit
-                              </p>
-                            </div>
-                            <Switch 
-                              id="encryptData" 
-                              checked={complianceSettings.encryptData}
-                              onCheckedChange={() => handleComplianceChange('encryptData')}
-                            />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="gdpr">GDPR</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              General Data Protection Regulation
+                            </p>
                           </div>
-                          <Separator />
+                          <Switch 
+                            id="gdpr" 
+                            checked={complianceSettings.gdpr}
+                            onCheckedChange={() => handleComplianceChange('gdpr')}
+                          />
+                        </div>
+                        <Separator />
 
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                              <Label htmlFor="enforcePasswords">Password Policy</Label>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Enforce strong password requirements
-                              </p>
-                            </div>
-                            <Switch 
-                              id="enforcePasswords" 
-                              checked={complianceSettings.enforcePasswords}
-                              onCheckedChange={() => handleComplianceChange('enforcePasswords')}
-                            />
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="soc2">SOC 2</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Service Organization Control 2
+                            </p>
                           </div>
+                          <Switch 
+                            id="soc2" 
+                            checked={complianceSettings.soc2}
+                            onCheckedChange={() => handleComplianceChange('soc2')}
+                          />
+                        </div>
+                        
+                        <Separator />
+                        <h3 className="text-lg font-medium pt-2">Security Controls</h3>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="enableRiskAutomation">Risk Automation</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically identify and assess compliance risks
+                            </p>
+                          </div>
+                          <Switch 
+                            id="enableRiskAutomation" 
+                            checked={complianceSettings.enableRiskAutomation}
+                            onCheckedChange={() => handleComplianceChange('enableRiskAutomation')}
+                          />
+                        </div>
+                        <Separator />
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="autoRemediation">Auto-Remediation</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically fix common compliance issues
+                            </p>
+                          </div>
+                          <Switch 
+                            id="autoRemediation" 
+                            checked={complianceSettings.autoRemediation}
+                            onCheckedChange={() => handleComplianceChange('autoRemediation')}
+                          />
+                        </div>
+                        <Separator />
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="requireMfa">Require MFA</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce multi-factor authentication for all users
+                            </p>
+                          </div>
+                          <Switch 
+                            id="requireMfa" 
+                            checked={complianceSettings.requireMfa}
+                            onCheckedChange={() => handleComplianceChange('requireMfa')}
+                          />
+                        </div>
+                        <Separator />
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="encryptData">Encrypt Data</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce encryption for all stored data
+                            </p>
+                          </div>
+                          <Switch 
+                            id="encryptData" 
+                            checked={complianceSettings.encryptData}
+                            onCheckedChange={() => handleComplianceChange('encryptData')}
+                          />
+                        </div>
+                        <Separator />
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="enforcePasswords">Password Policy</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce strong password policy
+                            </p>
+                          </div>
+                          <Switch 
+                            id="enforcePasswords" 
+                            checked={complianceSettings.enforcePasswords}
+                            onCheckedChange={() => handleComplianceChange('enforcePasswords')}
+                          />
                         </div>
 
                         <div className="flex justify-end">
@@ -909,13 +900,13 @@ const Settings = () => {
                 </TabsContent>
               )}
 
-              {user?.role === "ciso" && (
+              {(user?.role === "ciso" || user?.role === "incident_manager") && (
                 <TabsContent value="reports" className="mt-0">
                   <Card>
                     <CardHeader>
                       <CardTitle>Report Settings</CardTitle>
                       <CardDescription>
-                        Configure automated security reports and dashboards
+                        Configure automated security reports and analysis
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -924,88 +915,89 @@ const Settings = () => {
                           <div className="space-y-0.5">
                             <Label htmlFor="weeklyReports">Weekly Executive Reports</Label>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
-                              Generate weekly security reports
+                              Generate weekly security posture reports
                             </p>
                           </div>
-                                                  <Switch 
-                          id="weeklyReports" 
-                          checked={reportSettings.weeklyReports}
-                          onCheckedChange={() => handleReportSettingChange('weeklyReports')}
-                        />
-                      </div>
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="includeMetrics">Include Security Metrics</Label>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Add key security metrics to reports
-                          </p>
+                          <Switch 
+                            id="weeklyReports" 
+                            checked={reportSettings.weeklyReports}
+                            onCheckedChange={() => handleReportSettingChange('weeklyReports')}
+                          />
                         </div>
-                        <Switch 
-                          id="includeMetrics" 
-                          checked={reportSettings.includeMetrics}
-                          onCheckedChange={() => handleReportSettingChange('includeMetrics')}
-                        />
-                      </div>
-                      <Separator />
+                        <Separator />
 
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="includeRecommendations">Include Recommendations</Label>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Provide security improvement recommendations
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="includeMetrics">Include Security Metrics</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Add key security metrics and trends to reports
+                            </p>
+                          </div>
+                          <Switch 
+                            id="includeMetrics" 
+                            checked={reportSettings.includeMetrics}
+                            onCheckedChange={() => handleReportSettingChange('includeMetrics')}
+                          />
                         </div>
-                        <Switch 
-                          id="includeRecommendations" 
-                          checked={reportSettings.includeRecommendations}
-                          onCheckedChange={() => handleReportSettingChange('includeRecommendations')}
-                        />
-                      </div>
-                      <Separator />
+                        <Separator />
 
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="exportToPdf">Export to PDF</Label>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Automatically export reports to PDF
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="includeRecommendations">Include Recommendations</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Add security improvement recommendations to reports
+                            </p>
+                          </div>
+                          <Switch 
+                            id="includeRecommendations" 
+                            checked={reportSettings.includeRecommendations}
+                            onCheckedChange={() => handleReportSettingChange('includeRecommendations')}
+                          />
                         </div>
-                        <Switch 
-                          id="exportToPdf" 
-                          checked={reportSettings.exportToPdf}
-                          onCheckedChange={() => handleReportSettingChange('exportToPdf')}
-                        />
-                      </div>
-                      <Separator />
+                        <Separator />
 
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="autoShareWithTeam">Auto-Share with Team</Label>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Automatically distribute reports to security team
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="exportToPdf">Export to PDF</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically export reports to PDF format
+                            </p>
+                          </div>
+                          <Switch 
+                            id="exportToPdf" 
+                            checked={reportSettings.exportToPdf}
+                            onCheckedChange={() => handleReportSettingChange('exportToPdf')}
+                          />
                         </div>
-                        <Switch 
-                          id="autoShareWithTeam" 
-                          checked={reportSettings.autoShareWithTeam}
-                          onCheckedChange={() => handleReportSettingChange('autoShareWithTeam')}
-                        />
-                      </div>
+                        <Separator />
 
-                      <div className="flex justify-end">
-                        <Button onClick={saveSettings} disabled={saveLoading}>
-                          {saveLoading ? "Saving..." : "Save Changes"}
-                        </Button>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="autoShareWithTeam">Auto-Share with Team</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically share reports with the security team
+                            </p>
+                          </div>
+                          <Switch 
+                            id="autoShareWithTeam" 
+                            checked={reportSettings.autoShareWithTeam}
+                            onCheckedChange={() => handleReportSettingChange('autoShareWithTeam')}
+                          />
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button onClick={saveSettings} disabled={saveLoading}>
+                            {saveLoading ? "Saving..." : "Save Changes"}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </div>
-        </Tabs>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+            </div>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
