@@ -181,9 +181,9 @@ const Settings = () => {
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-white mb-6">Settings</h1>
         
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="md:w-64 space-y-2">
-            <Tabs defaultValue="account" orientation="vertical" className="w-full" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue="account" className="w-full flex flex-col md:flex-row gap-6" value={activeTab} onValueChange={setActiveTab}>
+            {/* Sidebar */}
+            <div className="md:w-64 space-y-2">
               <TabsList className="flex flex-col h-auto bg-transparent space-y-1">
                 <TabsTrigger value="account" className="justify-start">
                   <User className="h-5 w-5 mr-2" />
@@ -218,11 +218,10 @@ const Settings = () => {
                   </>
                 ) : null}
               </TabsList>
-            </Tabs>
-          </div>
-          
-          {/* Content */}
-          <div className="flex-1">
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1">
             <TabsContent value="account" className="mt-0">
               <Card>
                 <CardHeader>
@@ -1006,6 +1005,7 @@ const Settings = () => {
               </TabsContent>
             )}
           </div>
+          </Tabs>
         </div>
       </div>
     </div>
