@@ -51,11 +51,12 @@ function AppContent() {
             <Suspense fallback={<div>Loading...</div>}>
               <Switch>
                 <Route path="/" component={Dashboard} />
+                <Route path="/incidents" component={Dashboard} />
                 <Route path="/incidents/:id" component={IncidentDetails} />
                 <Route path="/resources" component={Resources} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/settings" component={Settings} />
-                <Route component={NotFound} />
+                <Route path="/:rest*" component={NotFound} />
               </Switch>
             </Suspense>
           </ErrorBoundary>
