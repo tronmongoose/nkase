@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { insertIncidentSchema, insertResourceSchema, insertTimelineEventSchema } from "@shared/schema";
+import { predictIncidentSeverity } from "./services/aiPredictor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes prefix
@@ -211,6 +212,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(201).json(event);
     } catch (error) {
       return res.status(400).json({ message: "Invalid event data", error });
+    }
+  });
+  
+  // AI-powered incident severity prediction
+  apiRouter.post("/incidents/predict-severity", async (req: Request, res: Response) => {
+    try {
+      // Use a partial schema to allow incomplete incident data for analysis
+      const incidentDataSchema = insertIncidentSchema.partial();
+      const incidentData = incidentDataSchema.parse(req.body);
+      
+      // Predict severity using AI or fallback
+      const prediction = await predictIncidentSeverity(incidentData);
+      return res.json(prediction);
+    } catch (error) {
+      console.error("Error predicting incident severity:", error);
+      return res.status(400).json({ 
+        message: "Error predicting incident severity", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // Get severity prediction for an existing incident
+  apiRouter.get("/incidents/:id/predict-severity", async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid incident ID" });
+    }
+    
+    const incident = await storage.getIncident(id);
+    if (!incident) {
+      return res.status(404).json({ message: "Incident not found" });
+    }
+    
+    try {
+      // Predict severity using AI or fallback
+      const prediction = await predictIncidentSeverity(incident);
+      return res.json(prediction);
+    } catch (error) {
+      console.error("Error predicting incident severity:", error);
+      return res.status(400).json({ 
+        message: "Error predicting incident severity", 
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

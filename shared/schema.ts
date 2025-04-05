@@ -2,6 +2,9 @@ import { pgTable, text, serial, integer, timestamp, jsonb, boolean } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Type definitions
+export type IncidentSeverity = "critical" | "high" | "medium" | "low";
+
 // User schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

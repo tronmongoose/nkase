@@ -2,30 +2,33 @@ import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Timeline } from "@/components/dashboard/Timeline";
 import { ActionPanel } from "@/components/dashboard/ActionPanel";
+import { SeverityPredictor } from "@/components/incidents/SeverityPredictor";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Pencil, ChevronLeft, AlertTriangle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Incident, Resource, TimelineEvent } from "@/types";
 
 const IncidentDetails = () => {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id || '';
   const { user } = useAuth();
   const incidentId = parseInt(id);
   
   // Fetch incident details
-  const { data: incident, isLoading: incidentLoading } = useQuery({
+  const { data: incident, isLoading: incidentLoading } = useQuery<Incident>({
     queryKey: [`/api/incidents/${incidentId}`],
     enabled: !isNaN(incidentId),
   });
   
   // Fetch resources
-  const { data: resources, isLoading: resourcesLoading } = useQuery({
+  const { data: resources, isLoading: resourcesLoading } = useQuery<Resource[]>({
     queryKey: ['/api/resources'],
     enabled: !!incident,
   });
   
   // Fetch timeline events
-  const { data: timelineEvents, isLoading: timelineLoading } = useQuery({
+  const { data: timelineEvents, isLoading: timelineLoading } = useQuery<TimelineEvent[]>({
     queryKey: [`/api/incidents/${incidentId}/timeline`],
     enabled: !isNaN(incidentId),
   });
@@ -232,8 +235,13 @@ const IncidentDetails = () => {
             </div>
           </div>
           
-          {/* Right column - timeline and actions */}
+          {/* Right column - timeline, AI risk analysis, and actions */}
           <div className="space-y-6">
+            {/* AI Risk Analysis */}
+            <SeverityPredictor 
+              incidentId={incident.id}
+            />
+
             {/* Timeline panel */}
             <div className="bg-white dark:bg-slate-800 shadow rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-slate-200 dark:border-slate-700">
