@@ -174,6 +174,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.json(resource);
   });
   
+  apiRouter.post("/resources/:id/destroy", async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid resource ID" });
+    }
+    
+    const resource = await storage.updateResource(id, { 
+      status: "Destroyed",
+      isolated: true // When we destroy, we also isolate it
+    });
+    
+    if (!resource) {
+      return res.status(404).json({ message: "Resource not found" });
+    }
+    
+    return res.json(resource);
+  });
+  
   // Get timeline events for an incident
   apiRouter.get("/incidents/:incidentId/timeline", async (req: Request, res: Response) => {
     const incidentId = parseInt(req.params.incidentId);

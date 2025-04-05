@@ -113,6 +113,47 @@ export const ResourceCard = ({
     }
   };
   
+  const createForensicCopy = async () => {
+    try {
+      await apiRequest('POST', `/api/resources/${id}/forensic-copy`);
+      toast({
+        title: "Forensic Copy Created",
+        description: `A forensic copy of ${name} has been created for analysis`,
+      });
+      
+      // Invalidate resources to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create forensic copy",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const destroyResource = async () => {
+    if (window.confirm(`Are you sure you want to destroy ${name}? This action cannot be undone.`)) {
+      try {
+        await apiRequest('POST', `/api/resources/${id}/destroy`);
+        toast({
+          title: "Resource Destroyed",
+          description: `${name} has been destroyed and isolated from the network`,
+          variant: "destructive",
+        });
+        
+        // Invalidate resources to refresh the data
+        queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to destroy the resource",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  
   // Get metadata items for the grid
   const getMetadataItems = () => {
     const items = [];
@@ -169,7 +210,7 @@ export const ResourceCard = ({
             <Clock className="h-4 w-4 mr-1" />
             {timeAgo}
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button 
               className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800"
               onClick={investigateResource}
@@ -177,11 +218,24 @@ export const ResourceCard = ({
               Investigate
             </button>
             <button 
-              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"
+              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-800"
               onClick={isolateResource}
               disabled={isolated}
             >
               {isolated ? "Isolated" : "Isolate"}
+            </button>
+            <button 
+              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
+              onClick={createForensicCopy}
+              disabled={forensicCopy}
+            >
+              {forensicCopy ? "Copy Created" : "Forensic Copy"}
+            </button>
+            <button 
+              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800"
+              onClick={destroyResource}
+            >
+              Destroy
             </button>
           </div>
         </div>

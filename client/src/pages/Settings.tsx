@@ -65,11 +65,26 @@ const Settings = () => {
   
   // Integration settings
   const [integrationSettings, setIntegrationSettings] = useState({
-    awsIntegration: true,
+    nkaseIntegration: true,
     guardDuty: true,
     securityHub: true,
     cloudTrail: true,
     cloudWatch: false
+  });
+  
+  // Compliance control settings
+  const [complianceSettings, setComplianceSettings] = useState({
+    pciDss: false,
+    hipaa: false,
+    nist80053: true,
+    iso27001: false,
+    gdpr: true,
+    soc2: false,
+    enableRiskAutomation: true,
+    autoRemediation: false,
+    requireMfa: true,
+    encryptData: true,
+    enforcePasswords: false
   });
   
   const handleNotificationChange = (setting: string) => {
@@ -119,6 +134,13 @@ const Settings = () => {
     });
   };
   
+  const handleComplianceChange = (setting: string) => {
+    setComplianceSettings({
+      ...complianceSettings,
+      [setting]: !complianceSettings[setting as keyof typeof complianceSettings]
+    });
+  };
+  
   const handleSessionTimeoutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSecuritySettings({
       ...securitySettings,
@@ -146,10 +168,10 @@ const Settings = () => {
     });
   };
   
-  const testAwsConnection = () => {
+  const testNkaseConnection = () => {
     toast({
-      title: "AWS Connection Test",
-      description: "Successfully connected to AWS services",
+      title: "NKASE Connection Test",
+      description: "Successfully connected to NKASE services",
     });
   };
   
@@ -183,12 +205,18 @@ const Settings = () => {
                   <Cloud className="h-5 w-5 mr-2" />
                   Integrations
                 </TabsTrigger>
-                {user?.role === "ciso" && (
-                  <TabsTrigger value="reports" className="justify-start">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Reports
-                  </TabsTrigger>
-                )}
+                {user?.role === "ciso" || user?.role === "incident_manager" ? (
+                  <>
+                    <TabsTrigger value="compliance" className="justify-start">
+                      <CheckCircle2 className="h-5 w-5 mr-2" />
+                      Compliance Controls
+                    </TabsTrigger>
+                    <TabsTrigger value="reports" className="justify-start">
+                      <FileText className="h-5 w-5 mr-2" />
+                      Reports
+                    </TabsTrigger>
+                  </>
+                ) : null}
               </TabsList>
             </Tabs>
           </div>
@@ -340,7 +368,7 @@ const Settings = () => {
                       <div className="space-y-0.5">
                         <Label htmlFor="resourceChanges">Resource Changes</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Notifications when AWS resources are modified
+                          Notifications when NKASE resources are modified
                         </p>
                       </div>
                       <Switch 
@@ -537,7 +565,7 @@ const Settings = () => {
                       <div className="space-y-0.5">
                         <Label htmlFor="showResourceIcons">Show Resource Icons</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Display icons next to AWS resources
+                          Display icons next to NKASE resources
                         </p>
                       </div>
                       <Switch 
@@ -590,27 +618,27 @@ const Settings = () => {
             <TabsContent value="integrations" className="mt-0">
               <Card>
                 <CardHeader>
-                  <CardTitle>AWS Integrations</CardTitle>
+                  <CardTitle>NKASE Integrations</CardTitle>
                   <CardDescription>
-                    Configure connections to AWS security services
+                    Configure connections to NKASE security services
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="awsIntegration">AWS Integration</Label>
+                        <Label htmlFor="nkaseIntegration">NKASE Integration</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Connect to your AWS environment
+                          Connect to your NKASE environment
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Switch 
-                          id="awsIntegration" 
-                          checked={integrationSettings.awsIntegration}
-                          onCheckedChange={() => handleIntegrationChange('awsIntegration')}
+                          id="nkaseIntegration" 
+                          checked={integrationSettings.nkaseIntegration}
+                          onCheckedChange={() => handleIntegrationChange('nkaseIntegration')}
                         />
-                        <Button variant="outline" size="sm" onClick={testAwsConnection}>
+                        <Button variant="outline" size="sm" onClick={testNkaseConnection}>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Test
                         </Button>
@@ -620,64 +648,64 @@ const Settings = () => {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="guardDuty">Amazon GuardDuty</Label>
+                        <Label htmlFor="guardDuty">NKASE GuardDuty</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Ingest findings from GuardDuty
+                          Ingest findings from NKASE GuardDuty
                         </p>
                       </div>
                       <Switch 
                         id="guardDuty" 
                         checked={integrationSettings.guardDuty}
                         onCheckedChange={() => handleIntegrationChange('guardDuty')}
-                        disabled={!integrationSettings.awsIntegration}
+                        disabled={!integrationSettings.nkaseIntegration}
                       />
                     </div>
                     <Separator />
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="securityHub">AWS Security Hub</Label>
+                        <Label htmlFor="securityHub">NKASE Security Hub</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Import findings from Security Hub
+                          Import findings from NKASE Security Hub
                         </p>
                       </div>
                       <Switch 
                         id="securityHub" 
                         checked={integrationSettings.securityHub}
                         onCheckedChange={() => handleIntegrationChange('securityHub')}
-                        disabled={!integrationSettings.awsIntegration}
+                        disabled={!integrationSettings.nkaseIntegration}
                       />
                     </div>
                     <Separator />
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="cloudTrail">AWS CloudTrail</Label>
+                        <Label htmlFor="cloudTrail">NKASE Cloud Trail</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Monitor CloudTrail events
+                          Monitor audit events and activities
                         </p>
                       </div>
                       <Switch 
                         id="cloudTrail" 
                         checked={integrationSettings.cloudTrail}
                         onCheckedChange={() => handleIntegrationChange('cloudTrail')}
-                        disabled={!integrationSettings.awsIntegration}
+                        disabled={!integrationSettings.nkaseIntegration}
                       />
                     </div>
                     <Separator />
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="cloudWatch">Amazon CloudWatch</Label>
+                        <Label htmlFor="cloudWatch">NKASE CloudWatch</Label>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Collect metrics from CloudWatch
+                          Collect metrics and monitoring data
                         </p>
                       </div>
                       <Switch 
                         id="cloudWatch" 
                         checked={integrationSettings.cloudWatch}
                         onCheckedChange={() => handleIntegrationChange('cloudWatch')}
-                        disabled={!integrationSettings.awsIntegration}
+                        disabled={!integrationSettings.nkaseIntegration}
                       />
                     </div>
                     
@@ -690,6 +718,197 @@ const Settings = () => {
                 </CardContent>
               </Card>
             </TabsContent>
+            
+            {(user?.role === "ciso" || user?.role === "incident_manager") && (
+              <TabsContent value="compliance" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Compliance Controls</CardTitle>
+                    <CardDescription>
+                      Configure security compliance frameworks and preventative controls
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <h3 className="text-lg font-medium mb-4">Compliance Frameworks</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="pciDss">PCI DSS</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Payment Card Industry Data Security Standard
+                            </p>
+                          </div>
+                          <Switch 
+                            id="pciDss" 
+                            checked={complianceSettings.pciDss}
+                            onCheckedChange={() => handleComplianceChange('pciDss')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="hipaa">HIPAA</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Health Insurance Portability and Accountability Act
+                            </p>
+                          </div>
+                          <Switch 
+                            id="hipaa" 
+                            checked={complianceSettings.hipaa}
+                            onCheckedChange={() => handleComplianceChange('hipaa')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="nist80053">NIST 800-53</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Security controls for federal information systems
+                            </p>
+                          </div>
+                          <Switch 
+                            id="nist80053" 
+                            checked={complianceSettings.nist80053}
+                            onCheckedChange={() => handleComplianceChange('nist80053')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="iso27001">ISO 27001</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              International standard for information security
+                            </p>
+                          </div>
+                          <Switch 
+                            id="iso27001" 
+                            checked={complianceSettings.iso27001}
+                            onCheckedChange={() => handleComplianceChange('iso27001')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="gdpr">GDPR</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              General Data Protection Regulation (EU)
+                            </p>
+                          </div>
+                          <Switch 
+                            id="gdpr" 
+                            checked={complianceSettings.gdpr}
+                            onCheckedChange={() => handleComplianceChange('gdpr')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="soc2">SOC 2</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Service Organization Control 2
+                            </p>
+                          </div>
+                          <Switch 
+                            id="soc2" 
+                            checked={complianceSettings.soc2}
+                            onCheckedChange={() => handleComplianceChange('soc2')}
+                          />
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-lg font-medium mt-8 mb-4">Preventative Controls</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="enableRiskAutomation">Risk Automation</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically detect and classify risk levels
+                            </p>
+                          </div>
+                          <Switch 
+                            id="enableRiskAutomation" 
+                            checked={complianceSettings.enableRiskAutomation}
+                            onCheckedChange={() => handleComplianceChange('enableRiskAutomation')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="autoRemediation">Auto-Remediation</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Automatically fix common compliance issues
+                            </p>
+                          </div>
+                          <Switch 
+                            id="autoRemediation" 
+                            checked={complianceSettings.autoRemediation}
+                            onCheckedChange={() => handleComplianceChange('autoRemediation')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="requireMfa">Require MFA</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce multi-factor authentication for all users
+                            </p>
+                          </div>
+                          <Switch 
+                            id="requireMfa" 
+                            checked={complianceSettings.requireMfa}
+                            onCheckedChange={() => handleComplianceChange('requireMfa')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="encryptData">Encrypt Data</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce encryption for all data at rest and in transit
+                            </p>
+                          </div>
+                          <Switch 
+                            id="encryptData" 
+                            checked={complianceSettings.encryptData}
+                            onCheckedChange={() => handleComplianceChange('encryptData')}
+                          />
+                        </div>
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="enforcePasswords">Password Policy</Label>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Enforce strong password requirements
+                            </p>
+                          </div>
+                          <Switch 
+                            id="enforcePasswords" 
+                            checked={complianceSettings.enforcePasswords}
+                            onCheckedChange={() => handleComplianceChange('enforcePasswords')}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <Button onClick={saveSettings} disabled={saveLoading}>
+                          {saveLoading ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
             
             {user?.role === "ciso" && (
               <TabsContent value="reports" className="mt-0">
