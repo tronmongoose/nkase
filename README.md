@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # NKASE - Cloud Security Incident Management Platform
 
 NKASE ("Always here just NKASE") is a comprehensive cloud security incident management platform designed to streamline security operations and incident response workflows.
@@ -18,7 +18,3 @@ NKASE ("Always here just NKASE") is a comprehensive cloud security incident mana
 - Database: PostgreSQL with Drizzle ORM
 - AI Integration: Anthropic Claude API (with fallback mechanism)
 - Authentication: Role-based access control
-=======
-# nkase
-NKASE App
->>>>>>> e57e1f3751675df123a23a145534d84158aee381
