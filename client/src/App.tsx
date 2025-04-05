@@ -51,7 +51,6 @@ function AppContent() {
             <Suspense fallback={<div>Loading...</div>}>
               <Switch>
                 <Route path="/" component={Dashboard} />
-                <Route path="/incidents" component={Dashboard} />
                 <Route path="/incidents/:id" component={IncidentDetails} />
                 <Route path="/resources" component={Resources} />
                 <Route path="/reports" component={Reports} />
