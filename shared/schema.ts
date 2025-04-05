@@ -40,6 +40,7 @@ export const insertIncidentSchema = createInsertSchema(incidents).pick({
   severity: true,
   status: true,
   detectedAt: true,
+  updatedAt: true,
   affectedResources: true,
   assignedTo: true,
   incidentId: true,

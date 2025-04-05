@@ -4,6 +4,8 @@ import {
   resources, type Resource, type InsertResource,
   timelineEvents, type TimelineEvent, type InsertTimelineEvent
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, gt, like } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -39,59 +41,37 @@ export interface IStorage {
   createTimelineEvent(event: InsertTimelineEvent): Promise<TimelineEvent>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private incidents: Map<number, Incident>;
-  private resources: Map<number, Resource>;
-  private timelineEvents: Map<number, TimelineEvent>;
-  
-  private userIdCounter: number;
-  private incidentIdCounter: number;
-  private resourceIdCounter: number;
-  private timelineEventIdCounter: number;
-  
-  constructor() {
-    this.users = new Map();
-    this.incidents = new Map();
-    this.resources = new Map();
-    this.timelineEvents = new Map();
-    
-    this.userIdCounter = 1;
-    this.incidentIdCounter = 1;
-    this.resourceIdCounter = 1;
-    this.timelineEventIdCounter = 1;
-    
-    // Initialize with seed data
-    this.seedData();
-  }
-  
+// Database implementation of IStorage
+export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
   
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values({
+      ...insertUser,
+      // Ensure required fields have default values if not provided
+      role: insertUser.role || "incident_responder"
+    }).returning();
     return user;
   }
   
   // Incident operations
   async getIncident(id: number): Promise<Incident | undefined> {
-    return this.incidents.get(id);
+    const [incident] = await db.select().from(incidents).where(eq(incidents.id, id));
+    return incident || undefined;
   }
   
   async getIncidentById(incidentId: string): Promise<Incident | undefined> {
-    return Array.from(this.incidents.values()).find(
-      (incident) => incident.incidentId === incidentId
-    );
+    const [incident] = await db.select().from(incidents).where(eq(incidents.incidentId, incidentId));
+    return incident || undefined;
   }
   
   async getIncidents(filters?: {
@@ -99,18 +79,20 @@ export class MemStorage implements IStorage {
     status?: string;
     timeframe?: string;
   }): Promise<Incident[]> {
-    let incidents = Array.from(this.incidents.values());
+    let query = db.select().from(incidents);
     
     if (filters) {
+      const conditions = [];
+      
       if (filters.severity && filters.severity !== 'All severities') {
-        incidents = incidents.filter(incident => incident.severity.toLowerCase() === filters.severity?.toLowerCase());
+        conditions.push(eq(incidents.severity, filters.severity.toLowerCase()));
       }
       
       if (filters.status && filters.status !== 'all') {
-        incidents = incidents.filter(incident => incident.status.toLowerCase() === filters.status?.toLowerCase());
+        conditions.push(eq(incidents.status, filters.status.toLowerCase()));
       }
       
-      if (filters.timeframe) {
+      if (filters.timeframe && filters.timeframe !== 'All time') {
         const now = new Date();
         let cutoff = new Date();
         
@@ -124,46 +106,57 @@ export class MemStorage implements IStorage {
           case 'Last 30 days':
             cutoff.setDate(now.getDate() - 30);
             break;
-          // 'All time' - no filtering
         }
         
-        if (filters.timeframe !== 'All time') {
-          incidents = incidents.filter(incident => new Date(incident.detectedAt) >= cutoff);
-        }
+        conditions.push(gt(incidents.detectedAt, cutoff));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
     }
     
     // Sort by detected time, most recent first
-    return incidents.sort((a, b) => 
-      new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime()
-    );
+    const result = await query.orderBy(desc(incidents.detectedAt));
+    return result;
   }
   
   async createIncident(insertIncident: InsertIncident): Promise<Incident> {
-    const id = this.incidentIdCounter++;
-    const incident: Incident = { ...insertIncident, id };
-    this.incidents.set(id, incident);
+    const dataToInsert = {
+      ...insertIncident,
+      // Ensure required fields have default values
+      updatedAt: insertIncident.detectedAt || new Date()
+    };
+  
+    const [incident] = await db.insert(incidents).values(dataToInsert).returning();
     return incident;
   }
   
   async updateIncident(id: number, incidentUpdate: Partial<InsertIncident>): Promise<Incident | undefined> {
-    const incident = this.incidents.get(id);
-    if (!incident) return undefined;
+    // Add updatedAt field
+    const updatedIncident = {
+      ...incidentUpdate,
+      updatedAt: new Date()
+    };
     
-    const updatedIncident = { ...incident, ...incidentUpdate, updatedAt: new Date() };
-    this.incidents.set(id, updatedIncident);
-    return updatedIncident;
+    const [incident] = await db
+      .update(incidents)
+      .set(updatedIncident)
+      .where(eq(incidents.id, id))
+      .returning();
+    
+    return incident || undefined;
   }
   
   // Resource operations
   async getResource(id: number): Promise<Resource | undefined> {
-    return this.resources.get(id);
+    const [resource] = await db.select().from(resources).where(eq(resources.id, id));
+    return resource || undefined;
   }
   
   async getResourceById(resourceId: string): Promise<Resource | undefined> {
-    return Array.from(this.resources.values()).find(
-      (resource) => resource.resourceId === resourceId
-    );
+    const [resource] = await db.select().from(resources).where(eq(resources.resourceId, resourceId));
+    return resource || undefined;
   }
   
   async getResources(filters?: {
@@ -171,232 +164,257 @@ export class MemStorage implements IStorage {
     region?: string;
     status?: string;
   }): Promise<Resource[]> {
-    let resources = Array.from(this.resources.values());
+    let query = db.select().from(resources);
     
     if (filters) {
+      const conditions = [];
+      
       if (filters.resourceType && filters.resourceType !== 'All resources') {
-        resources = resources.filter(resource => resource.resourceType === filters.resourceType);
+        conditions.push(eq(resources.resourceType, filters.resourceType));
       }
       
       if (filters.region && filters.region !== 'All regions') {
-        resources = resources.filter(resource => resource.region === filters.region);
+        conditions.push(eq(resources.region, filters.region));
       }
       
       if (filters.status) {
-        resources = resources.filter(resource => resource.status.toLowerCase().includes(filters.status!.toLowerCase()));
+        conditions.push(like(resources.status, `%${filters.status}%`));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
       }
     }
     
     // Sort by discovered time, most recent first
-    return resources.sort((a, b) => 
-      new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-    );
+    const result = await query.orderBy(desc(resources.discoveredAt));
+    return result;
   }
   
   async createResource(insertResource: InsertResource): Promise<Resource> {
-    const id = this.resourceIdCounter++;
-    const resource: Resource = { ...insertResource, id };
-    this.resources.set(id, resource);
+    const dataToInsert = {
+      ...insertResource,
+      // Ensure required fields have default values
+      status: insertResource.status || "normal"
+    };
+    
+    const [resource] = await db.insert(resources).values(dataToInsert).returning();
     return resource;
   }
   
   async updateResource(id: number, resourceUpdate: Partial<InsertResource>): Promise<Resource | undefined> {
-    const resource = this.resources.get(id);
-    if (!resource) return undefined;
+    const [resource] = await db
+      .update(resources)
+      .set(resourceUpdate)
+      .where(eq(resources.id, id))
+      .returning();
     
-    const updatedResource = { ...resource, ...resourceUpdate };
-    this.resources.set(id, updatedResource);
-    return updatedResource;
+    return resource || undefined;
   }
   
   // Timeline operations
   async getTimelineEvents(incidentId: number): Promise<TimelineEvent[]> {
-    const events = Array.from(this.timelineEvents.values())
-      .filter(event => event.incidentId === incidentId);
+    const events = await db
+      .select()
+      .from(timelineEvents)
+      .where(eq(timelineEvents.incidentId, incidentId))
+      .orderBy(timelineEvents.timestamp);
     
-    // Sort by timestamp
-    return events.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    return events;
   }
   
   async createTimelineEvent(insertEvent: InsertTimelineEvent): Promise<TimelineEvent> {
-    const id = this.timelineEventIdCounter++;
-    const event: TimelineEvent = { ...insertEvent, id };
-    this.timelineEvents.set(id, event);
+    const [event] = await db.insert(timelineEvents).values({
+      ...insertEvent,
+      // Ensure timestamp exists
+      timestamp: insertEvent.timestamp || new Date()
+    }).returning();
+    
     return event;
   }
   
-  // Seed with initial demo data
-  private seedData() {
-    // Create default user
-    const user: InsertUser = {
-      username: "alexmorgan",
-      password: "securepassword", // In a real app, this would be hashed
-      fullName: "Alex Morgan",
-      role: "incident_responder",
-      avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-    };
-    this.createUser(user);
-    
-    // Create sample resources
-    const ec2Resource: InsertResource = {
-      resourceId: "i-09a8d67b5e4c3f21d",
-      resourceType: "EC2",
-      name: "API Server",
-      region: "us-east-1",
-      status: "Compromised",
-      metadata: {
-        type: "t3.medium",
-        vpc: "vpc-89a7f3c1"
-      },
-      isolated: false,
-      forensicCopy: false,
-      discoveredAt: new Date(Date.now() - 10 * 60 * 1000) // 10 min ago
-    };
-    this.createResource(ec2Resource);
-    
-    const s3Resource: InsertResource = {
-      resourceId: "customer-data-prod-e7fb9",
-      resourceType: "S3",
-      name: "Customer Data Bucket",
-      region: "us-west-2",
-      status: "Data Exfiltration",
-      metadata: {
-        access: "Private",
-        objects: "~14,500"
-      },
-      isolated: false,
-      forensicCopy: false,
-      discoveredAt: new Date(Date.now() - 45 * 60 * 1000) // 45 min ago
-    };
-    this.createResource(s3Resource);
-    
-    const iamResource: InsertResource = {
-      resourceId: "developer-jenkins-role",
-      resourceType: "IAM",
-      name: "Jenkins Role",
-      region: "global",
-      status: "Privilege Escalation",
-      metadata: {
-        account: "123456789012",
-        service: "EC2",
-        access: "Full Admin"
-      },
-      isolated: false,
-      forensicCopy: false,
-      discoveredAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-    };
-    this.createResource(iamResource);
-    
-    const lambdaResource: InsertResource = {
-      resourceId: "api-auth-processor",
-      resourceType: "Lambda",
-      name: "API Auth Processor",
-      region: "us-east-1",
-      status: "Modified Code",
-      metadata: {
-        runtime: "Node.js 14.x",
-        memory: "512 MB"
-      },
-      isolated: false,
-      forensicCopy: false,
-      discoveredAt: new Date(Date.now() - 3 * 60 * 60 * 1000) // 3 hours ago
-    };
-    this.createResource(lambdaResource);
-    
-    // Create sample incidents
-    const incident1: InsertIncident = {
-      title: "Unauthorized API Access",
-      description: "Abnormal activity detected on EC2 instance i-09a8d67b5e4c3f21d in us-east-1 region. Unauthorized API calls were made using the instance profile credentials. Network traffic analysis shows potential data exfiltration to unknown external IP.",
-      severity: "critical",
-      status: "active",
-      detectedAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min ago
-      affectedResources: ["i-09a8d67b5e4c3f21d", "vpc-89a7f3c1"],
-      assignedTo: 1, // Alex Morgan
-      incidentId: "INC-20230715-0053"
-    };
-    this.createIncident(incident1);
-    
-    const incident2: InsertIncident = {
-      title: "S3 Bucket Data Exfiltration",
-      description: "Unusual access patterns detected on customer data bucket. Large volume of GetObject requests from unfamiliar IP addresses. Potential customer data breach.",
-      severity: "critical",
-      status: "active",
-      detectedAt: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
-      affectedResources: ["customer-data-prod-e7fb9"],
-      assignedTo: 1, // Alex Morgan
-      incidentId: "INC-20230715-0052"
-    };
-    this.createIncident(incident2);
-    
-    const incident3: InsertIncident = {
-      title: "IAM Privilege Escalation",
-      description: "Jenkins role has been modified to gain admin privileges. Suspicious policy attachments detected.",
-      severity: "high",
-      status: "active",
-      detectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      affectedResources: ["developer-jenkins-role"],
-      assignedTo: 1, // Alex Morgan
-      incidentId: "INC-20230715-0051"
-    };
-    this.createIncident(incident3);
-    
-    // Create timeline events for first incident
-    const timeline1: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (10 * 60 * 1000)),
-      eventType: "initial_access",
-      description: "Suspicious login detected from IP 203.0.113.42 (Geo: Russia) using compromised credentials.",
-      severity: "critical"
-    };
-    this.createTimelineEvent(timeline1);
-    
-    const timeline2: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (9 * 60 * 1000) - 15000),
-      eventType: "privilege_escalation",
-      description: "Attacker modified IAM role permissions to gain admin access to EC2 instance.",
-      severity: "critical"
-    };
-    this.createTimelineEvent(timeline2);
-    
-    const timeline3: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (9 * 60 * 1000) - 30000),
-      eventType: "lateral_movement",
-      description: "Access to additional EC2 instances in the same VPC detected from compromised instance.",
-      severity: "high"
-    };
-    this.createTimelineEvent(timeline3);
-    
-    const timeline4: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (8 * 60 * 1000)),
-      eventType: "discovery",
-      description: "Multiple DescribeInstances, ListBuckets API calls detected from compromised instance.",
-      severity: "high"
-    };
-    this.createTimelineEvent(timeline4);
-    
-    const timeline5: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (7 * 60 * 1000)),
-      eventType: "data_collection",
-      description: "Unauthorized S3 GetObject calls to customer-data-prod-e7fb9 bucket detected.",
-      severity: "critical"
-    };
-    this.createTimelineEvent(timeline5);
-    
-    const timeline6: InsertTimelineEvent = {
-      incidentId: 1,
-      timestamp: new Date(Date.now() - (6 * 60 * 1000)),
-      eventType: "alert_triggered",
-      description: "GuardDuty detected unusual API activity and triggered a security alert.",
-      severity: "info"
-    };
-    this.createTimelineEvent(timeline6);
+  // Seed method to initialize database with sample data
+  async seedData() {
+    // Check if users table is empty
+    const userCount = await db.select().from(users);
+    if (userCount.length === 0) {
+      console.log("Seeding database with initial data...");
+      
+      // Create default user
+      const user: InsertUser = {
+        username: "alexmorgan",
+        password: "securepassword", // In a real app, this would be hashed
+        fullName: "Alex Morgan",
+        role: "incident_responder",
+        avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+      };
+      const createdUser = await this.createUser(user);
+      
+      // Create sample resources
+      const ec2Resource: InsertResource = {
+        resourceId: "i-09a8d67b5e4c3f21d",
+        resourceType: "EC2",
+        name: "API Server",
+        region: "us-east-1",
+        status: "Compromised",
+        metadata: {
+          type: "t3.medium",
+          vpc: "vpc-89a7f3c1"
+        },
+        isolated: false,
+        forensicCopy: false,
+        discoveredAt: new Date(Date.now() - 10 * 60 * 1000) // 10 min ago
+      };
+      await this.createResource(ec2Resource);
+      
+      const s3Resource: InsertResource = {
+        resourceId: "customer-data-prod-e7fb9",
+        resourceType: "S3",
+        name: "Customer Data Bucket",
+        region: "us-west-2",
+        status: "Data Exfiltration",
+        metadata: {
+          access: "Private",
+          objects: "~14,500"
+        },
+        isolated: false,
+        forensicCopy: false,
+        discoveredAt: new Date(Date.now() - 45 * 60 * 1000) // 45 min ago
+      };
+      await this.createResource(s3Resource);
+      
+      const iamResource: InsertResource = {
+        resourceId: "developer-jenkins-role",
+        resourceType: "IAM",
+        name: "Jenkins Role",
+        region: "global",
+        status: "Privilege Escalation",
+        metadata: {
+          account: "123456789012",
+          service: "EC2",
+          access: "Full Admin"
+        },
+        isolated: false,
+        forensicCopy: false,
+        discoveredAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+      };
+      await this.createResource(iamResource);
+      
+      const lambdaResource: InsertResource = {
+        resourceId: "api-auth-processor",
+        resourceType: "Lambda",
+        name: "API Auth Processor",
+        region: "us-east-1",
+        status: "Modified Code",
+        metadata: {
+          runtime: "Node.js 14.x",
+          memory: "512 MB"
+        },
+        isolated: false,
+        forensicCopy: false,
+        discoveredAt: new Date(Date.now() - 3 * 60 * 60 * 1000) // 3 hours ago
+      };
+      await this.createResource(lambdaResource);
+      
+      // Create sample incidents
+      const incident1: InsertIncident = {
+        title: "Unauthorized API Access",
+        description: "Abnormal activity detected on EC2 instance i-09a8d67b5e4c3f21d in us-east-1 region. Unauthorized API calls were made using the instance profile credentials. Network traffic analysis shows potential data exfiltration to unknown external IP.",
+        severity: "critical",
+        status: "active",
+        detectedAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min ago
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000), // Same as detected
+        affectedResources: ["i-09a8d67b5e4c3f21d", "vpc-89a7f3c1"],
+        assignedTo: createdUser.id,
+        incidentId: "INC-20230715-0053"
+      };
+      const createdIncident1 = await this.createIncident(incident1);
+      
+      const incident2: InsertIncident = {
+        title: "S3 Bucket Data Exfiltration",
+        description: "Unusual access patterns detected on customer data bucket. Large volume of GetObject requests from unfamiliar IP addresses. Potential customer data breach.",
+        severity: "critical",
+        status: "active",
+        detectedAt: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
+        updatedAt: new Date(Date.now() - 45 * 60 * 1000), // Same as detected
+        affectedResources: ["customer-data-prod-e7fb9"],
+        assignedTo: createdUser.id,
+        incidentId: "INC-20230715-0052"
+      };
+      await this.createIncident(incident2);
+      
+      const incident3: InsertIncident = {
+        title: "IAM Privilege Escalation",
+        description: "Jenkins role has been modified to gain admin privileges. Suspicious policy attachments detected.",
+        severity: "high",
+        status: "active",
+        detectedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // Same as detected
+        affectedResources: ["developer-jenkins-role"],
+        assignedTo: createdUser.id,
+        incidentId: "INC-20230715-0051"
+      };
+      await this.createIncident(incident3);
+      
+      // Create timeline events for first incident
+      const timeline1: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (10 * 60 * 1000)),
+        eventType: "initial_access",
+        description: "Suspicious login detected from IP 203.0.113.42 (Geo: Russia) using compromised credentials.",
+        severity: "critical"
+      };
+      await this.createTimelineEvent(timeline1);
+      
+      const timeline2: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (9 * 60 * 1000) - 15000),
+        eventType: "privilege_escalation",
+        description: "Attacker modified IAM role permissions to gain admin access to EC2 instance.",
+        severity: "critical"
+      };
+      await this.createTimelineEvent(timeline2);
+      
+      const timeline3: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (9 * 60 * 1000) - 30000),
+        eventType: "lateral_movement",
+        description: "Access to additional EC2 instances in the same VPC detected from compromised instance.",
+        severity: "high"
+      };
+      await this.createTimelineEvent(timeline3);
+      
+      const timeline4: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (8 * 60 * 1000)),
+        eventType: "discovery",
+        description: "Multiple DescribeInstances, ListBuckets API calls detected from compromised instance.",
+        severity: "high"
+      };
+      await this.createTimelineEvent(timeline4);
+      
+      const timeline5: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (7 * 60 * 1000)),
+        eventType: "data_collection",
+        description: "Unauthorized S3 GetObject calls to customer-data-prod-e7fb9 bucket detected.",
+        severity: "critical"
+      };
+      await this.createTimelineEvent(timeline5);
+      
+      const timeline6: InsertTimelineEvent = {
+        incidentId: createdIncident1.id,
+        timestamp: new Date(Date.now() - (6 * 60 * 1000)),
+        eventType: "alert_triggered",
+        description: "GuardDuty detected unusual API activity and triggered a security alert.",
+        severity: "info"
+      };
+      await this.createTimelineEvent(timeline6);
+      
+      console.log("Database seeding completed successfully.");
+    }
   }
 }
 
-export const storage = new MemStorage();
+// Export an instance of DatabaseStorage
+export const storage = new DatabaseStorage();
