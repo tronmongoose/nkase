@@ -183,7 +183,7 @@ const Settings = () => {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Sidebar */}
           <div className="md:w-64 space-y-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="w-full">
+            <Tabs defaultValue="account" orientation="vertical" className="w-full" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="flex flex-col h-auto bg-transparent space-y-1">
                 <TabsTrigger value="account" className="justify-start">
                   <User className="h-5 w-5 mr-2" />
