@@ -114,7 +114,7 @@ export const Sidebar = ({ isOpen, onRoleSwitch }: SidebarProps) => {
                 key={item.path} 
                 href={item.path}
                 className={`flex items-center px-2 py-2 text-sm rounded-md ${
-                  item.activePaths.some(path => location.startsWith(path))
+                  item.activePaths?.some(path => location.startsWith(path)) || location === item.path
                     ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium" 
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
