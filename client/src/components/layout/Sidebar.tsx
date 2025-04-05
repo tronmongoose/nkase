@@ -71,7 +71,10 @@ export const Sidebar = ({ isOpen, onRoleSwitch }: SidebarProps) => {
               <path d="M12 8V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               <path d="M8 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <span className="ml-2 text-sm font-semibold">CLOUD SHIELD</span>
+            <div className="ml-2 flex flex-col">
+              <span className="text-sm font-semibold">NKASE</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Always here just NKASE</span>
+            </div>
           </div>
         </div>
         

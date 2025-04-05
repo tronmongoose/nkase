@@ -167,7 +167,7 @@ const Dashboard = () => {
             {/* Resources Panel */}
             <div className="bg-white dark:bg-slate-800 shadow rounded-lg">
               <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-                <h3 className="text-lg leading-6 font-medium text-slate-900 dark:text-white">Affected AWS Resources</h3>
+                <h3 className="text-lg leading-6 font-medium text-slate-900 dark:text-white">NKASE Protected Resources</h3>
                 <div className="flex space-x-2">
                   <select 
                     className="mt-1 block text-sm pl-3 pr-10 py-2 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 rounded-md border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500"

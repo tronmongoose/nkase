@@ -117,7 +117,8 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort by detected time, most recent first
-    const result = await query.orderBy(desc(incidents.detectedAt));
+    const queryWithOrder = query.orderBy(desc(incidents.detectedAt));
+    const result = await queryWithOrder;
     return result;
   }
   
@@ -187,7 +188,8 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort by discovered time, most recent first
-    const result = await query.orderBy(desc(resources.discoveredAt));
+    const queryWithOrder = query.orderBy(desc(resources.discoveredAt));
+    const result = await queryWithOrder;
     return result;
   }
   
