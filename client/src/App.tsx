@@ -5,6 +5,7 @@ import IncidentDetails from "@/pages/IncidentDetails";
 import Resources from "@/pages/Resources";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import Accounts from "@/pages/Accounts";
 import NotFound from "@/pages/not-found";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -53,6 +54,7 @@ function AppContent() {
                 <Route path="/" component={Dashboard} />
                 <Route path="/incidents/:id" component={IncidentDetails} />
                 <Route path="/resources" component={Resources} />
+                <Route path="/accounts" component={Accounts} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/:rest*" component={NotFound} />

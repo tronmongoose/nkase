@@ -4,6 +4,7 @@ import { z } from "zod";
 
 // Type definitions
 export type IncidentSeverity = "critical" | "high" | "medium" | "low";
+export type CloudProvider = "aws" | "azure" | "gcp";
 
 // User schema
 export const users = pgTable("users", {
@@ -93,6 +94,30 @@ export const insertTimelineEventSchema = createInsertSchema(timelineEvents).pick
   severity: true,
 });
 
+// Cloud Account schema
+export const cloudAccounts = pgTable("cloud_accounts", {
+  id: serial("id").primaryKey(),
+  accountId: text("account_id").notNull(), // AWS account ID, Azure subscription ID, etc.
+  provider: text("provider").notNull(), // aws, azure, gcp
+  name: text("name").notNull(),
+  status: text("status").notNull().default("active"), // active, suspended, etc.
+  ownerEmail: text("owner_email"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastScannedAt: timestamp("last_scanned_at"),
+  metadata: jsonb("metadata"), // Additional account-specific details
+});
+
+export const insertCloudAccountSchema = createInsertSchema(cloudAccounts).pick({
+  accountId: true,
+  provider: true,
+  name: true,
+  status: true,
+  ownerEmail: true,
+  createdAt: true,
+  lastScannedAt: true,
+  metadata: true,
+});
+
 // Types for the schemas
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -105,3 +130,6 @@ export type InsertResource = z.infer<typeof insertResourceSchema>;
 
 export type TimelineEvent = typeof timelineEvents.$inferSelect;
 export type InsertTimelineEvent = z.infer<typeof insertTimelineEventSchema>;
+
+export type CloudAccount = typeof cloudAccounts.$inferSelect;
+export type InsertCloudAccount = z.infer<typeof insertCloudAccountSchema>;

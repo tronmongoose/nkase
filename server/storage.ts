@@ -2,7 +2,8 @@ import {
   users, type User, type InsertUser,
   incidents, type Incident, type InsertIncident,
   resources, type Resource, type InsertResource,
-  timelineEvents, type TimelineEvent, type InsertTimelineEvent
+  timelineEvents, type TimelineEvent, type InsertTimelineEvent,
+  cloudAccounts, type CloudAccount, type InsertCloudAccount
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gt, like } from "drizzle-orm";
@@ -39,6 +40,16 @@ export interface IStorage {
   // Timeline operations
   getTimelineEvents(incidentId: number): Promise<TimelineEvent[]>;
   createTimelineEvent(event: InsertTimelineEvent): Promise<TimelineEvent>;
+  
+  // Cloud Account operations
+  getCloudAccount(id: number): Promise<CloudAccount | undefined>;
+  getCloudAccountById(accountId: string): Promise<CloudAccount | undefined>;
+  getCloudAccounts(filters?: {
+    provider?: string;
+    status?: string;
+  }): Promise<CloudAccount[]>;
+  createCloudAccount(account: InsertCloudAccount): Promise<CloudAccount>;
+  updateCloudAccount(id: number, account: Partial<InsertCloudAccount>): Promise<CloudAccount | undefined>;
 }
 
 // Database implementation of IStorage
@@ -117,9 +128,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort by detected time, most recent first
-    const queryWithOrder = query.orderBy(desc(incidents.detectedAt));
-    const result = await queryWithOrder;
-    return result;
+    return await query.orderBy(desc(incidents.detectedAt));
   }
   
   async createIncident(insertIncident: InsertIncident): Promise<Incident> {
@@ -188,9 +197,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Sort by discovered time, most recent first
-    const queryWithOrder = query.orderBy(desc(resources.discoveredAt));
-    const result = await queryWithOrder;
-    return result;
+    return await query.orderBy(desc(resources.discoveredAt));
   }
   
   async createResource(insertResource: InsertResource): Promise<Resource> {
@@ -233,6 +240,64 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     
     return event;
+  }
+  
+  // Cloud Account operations
+  async getCloudAccount(id: number): Promise<CloudAccount | undefined> {
+    const [account] = await db.select().from(cloudAccounts).where(eq(cloudAccounts.id, id));
+    return account || undefined;
+  }
+  
+  async getCloudAccountById(accountId: string): Promise<CloudAccount | undefined> {
+    const [account] = await db.select().from(cloudAccounts).where(eq(cloudAccounts.accountId, accountId));
+    return account || undefined;
+  }
+  
+  async getCloudAccounts(filters?: {
+    provider?: string;
+    status?: string;
+  }): Promise<CloudAccount[]> {
+    let query = db.select().from(cloudAccounts);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.provider && filters.provider !== 'all') {
+        conditions.push(eq(cloudAccounts.provider, filters.provider.toLowerCase()));
+      }
+      
+      if (filters.status && filters.status !== 'all') {
+        conditions.push(eq(cloudAccounts.status, filters.status.toLowerCase()));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    // Sort by creation time, most recent first
+    return await query.orderBy(desc(cloudAccounts.createdAt));
+  }
+  
+  async createCloudAccount(insertAccount: InsertCloudAccount): Promise<CloudAccount> {
+    const dataToInsert = {
+      ...insertAccount,
+      // Ensure required fields have default values
+      status: insertAccount.status || "active"
+    };
+    
+    const [account] = await db.insert(cloudAccounts).values(dataToInsert).returning();
+    return account;
+  }
+  
+  async updateCloudAccount(id: number, accountUpdate: Partial<InsertCloudAccount>): Promise<CloudAccount | undefined> {
+    const [account] = await db
+      .update(cloudAccounts)
+      .set(accountUpdate)
+      .where(eq(cloudAccounts.id, id))
+      .returning();
+    
+    return account || undefined;
   }
   
   // Seed method to initialize database with sample data
@@ -412,6 +477,83 @@ export class DatabaseStorage implements IStorage {
         severity: "info"
       };
       await this.createTimelineEvent(timeline6);
+      
+      // Create sample cloud accounts
+      const awsAccount1: InsertCloudAccount = {
+        accountId: "123456789012",
+        provider: "aws",
+        name: "Production AWS Account",
+        status: "active",
+        ownerEmail: "cloud-admin@example.com",
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
+        lastScannedAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        metadata: {
+          region: "us-east-1",
+          services: ["EC2", "S3", "RDS", "Lambda"],
+          tags: {
+            Environment: "Production",
+            BusinessUnit: "Engineering"
+          }
+        }
+      };
+      await this.createCloudAccount(awsAccount1);
+      
+      const awsAccount2: InsertCloudAccount = {
+        accountId: "098765432109",
+        provider: "aws",
+        name: "Development AWS Account",
+        status: "active",
+        ownerEmail: "dev-admin@example.com",
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
+        lastScannedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        metadata: {
+          region: "us-west-2",
+          services: ["EC2", "S3", "DynamoDB"],
+          tags: {
+            Environment: "Development",
+            BusinessUnit: "Engineering"
+          }
+        }
+      };
+      await this.createCloudAccount(awsAccount2);
+      
+      const azureAccount1: InsertCloudAccount = {
+        accountId: "f8d7c6b5-a4e3-9d2c-1b0a-9f8e7d6c5b4a",
+        provider: "azure",
+        name: "Azure Enterprise Subscription",
+        status: "active",
+        ownerEmail: "azure-admin@example.com",
+        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+        lastScannedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+        metadata: {
+          location: "East US",
+          services: ["Virtual Machines", "Storage", "SQL Database"],
+          tags: {
+            Environment: "Production",
+            Department: "IT"
+          }
+        }
+      };
+      await this.createCloudAccount(azureAccount1);
+      
+      const azureAccount2: InsertCloudAccount = {
+        accountId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        provider: "azure",
+        name: "Azure Dev/Test Subscription",
+        status: "active",
+        ownerEmail: "dev-azure@example.com",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        lastScannedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        metadata: {
+          location: "West Europe",
+          services: ["Virtual Machines", "App Service", "Cosmos DB"],
+          tags: {
+            Environment: "Development",
+            Department: "Research"
+          }
+        }
+      };
+      await this.createCloudAccount(azureAccount2);
       
       console.log("Database seeding completed successfully.");
     }

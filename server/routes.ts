@@ -2,7 +2,12 @@ import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertIncidentSchema, insertResourceSchema, insertTimelineEventSchema } from "@shared/schema";
+import { 
+  insertIncidentSchema,
+  insertResourceSchema,
+  insertTimelineEventSchema,
+  insertCloudAccountSchema
+} from "@shared/schema";
 import { predictIncidentSeverity } from "./services/aiPredictor";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -256,6 +261,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error predicting incident severity", 
         error: error instanceof Error ? error.message : String(error) 
       });
+    }
+  });
+
+  // Cloud Account Routes
+  
+  // Get all cloud accounts with optional filters
+  apiRouter.get("/cloud-accounts", async (req: Request, res: Response) => {
+    const provider = req.query.provider as string | undefined;
+    const status = req.query.status as string | undefined;
+    
+    const accounts = await storage.getCloudAccounts({
+      provider,
+      status
+    });
+    
+    return res.json(accounts);
+  });
+
+  // Get single cloud account by ID
+  apiRouter.get("/cloud-accounts/:id", async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid cloud account ID" });
+    }
+    
+    const account = await storage.getCloudAccount(id);
+    if (!account) {
+      return res.status(404).json({ message: "Cloud account not found" });
+    }
+    
+    return res.json(account);
+  });
+  
+  // Create cloud account
+  apiRouter.post("/cloud-accounts", async (req: Request, res: Response) => {
+    try {
+      const accountData = insertCloudAccountSchema.parse(req.body);
+      const account = await storage.createCloudAccount(accountData);
+      return res.status(201).json(account);
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid cloud account data", error });
+    }
+  });
+  
+  // Update cloud account
+  apiRouter.patch("/cloud-accounts/:id", async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid cloud account ID" });
+    }
+    
+    try {
+      const updateSchema = insertCloudAccountSchema.partial();
+      const updateData = updateSchema.parse(req.body);
+      
+      const account = await storage.updateCloudAccount(id, updateData);
+      if (!account) {
+        return res.status(404).json({ message: "Cloud account not found" });
+      }
+      
+      return res.json(account);
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid update data", error });
     }
   });
 

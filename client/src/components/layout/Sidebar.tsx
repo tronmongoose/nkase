@@ -8,7 +8,8 @@ import {
   FileText, 
   Home, 
   Moon, 
-  Sun 
+  Sun,
+  Cloud
 } from "lucide-react";
 
 interface SidebarProps {
@@ -49,6 +50,7 @@ export const Sidebar = ({ isOpen, onRoleSwitch }: SidebarProps) => {
   const navItems = [
     { icon: <Bell className="h-5 w-5 mr-2" />, name: "Incident Dashboard", path: "/" , activePaths: ["/", "/incidents"]},
     { icon: <FileText className="h-5 w-5 mr-2" />, name: "Resources", path: "/resources" },
+    { icon: <Cloud className="h-5 w-5 mr-2" />, name: "Cloud Accounts", path: "/accounts" },
     { icon: <BarChart3 className="h-5 w-5 mr-2" />, name: "Reports", path: "/reports" },
     { icon: <Cog className="h-5 w-5 mr-2" />, name: "Settings", path: "/settings" },
   ];
