@@ -69,7 +69,7 @@ const Dashboard = () => {
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">{roleName} Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Current Incident View</h1>
           <div className="flex space-x-3">
             <button className="inline-flex items-center px-3 py-2 border border-slate-300 dark:border-slate-600 shadow-sm text-sm leading-4 font-medium rounded-md text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none">
               <MoreHorizontal className="h-4 w-4 mr-2" />

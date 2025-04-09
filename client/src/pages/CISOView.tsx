@@ -27,7 +27,7 @@ interface ComplianceSummary {
   totalRules: number;
 }
 
-export default function CISODashboard() {
+export default function CISOView() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("overview");
 
