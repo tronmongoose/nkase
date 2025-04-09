@@ -94,7 +94,7 @@ export default function CISODashboard() {
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold">CISO Dashboard</h1>
+        <h1 className="text-2xl font-bold">CISO View</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="pb-2">
@@ -130,7 +130,7 @@ export default function CISODashboard() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">CISO Dashboard</h1>
+        <h1 className="text-2xl font-bold">CISO View</h1>
         <div className="flex space-x-2 border rounded-md p-1">
           <button 
             className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === 'overview' ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
