@@ -993,6 +993,58 @@ export class DatabaseStorage implements IStorage {
       };
       const createdUser = await this.createUser(user);
       
+      // Create cloud accounts
+      const awsAccount1: InsertCloudAccount = {
+        accountId: "123456789012",
+        provider: "aws",
+        name: "Production AWS Account",
+        status: "active",
+        ownerEmail: "cloudadmin@company.com",
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
+        lastScannedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        metadata: {
+          region: "us-east-1",
+          rootUser: "root@company.com",
+          vpcCount: 3,
+          environment: "production"
+        }
+      };
+      await this.createCloudAccount(awsAccount1);
+      
+      const awsAccount2: InsertCloudAccount = {
+        accountId: "234567890123",
+        provider: "aws",
+        name: "Development AWS Account",
+        status: "active",
+        ownerEmail: "devteam@company.com",
+        createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // 120 days ago
+        lastScannedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        metadata: {
+          region: "us-west-2",
+          rootUser: "devops@company.com",
+          vpcCount: 2,
+          environment: "development"
+        }
+      };
+      await this.createCloudAccount(awsAccount2);
+      
+      const azureAccount1: InsertCloudAccount = {
+        accountId: "f8d7c6b5-a4e3-1234-9876-a1b2c3d4e5f6",
+        provider: "azure",
+        name: "Azure Production Subscription",
+        status: "active",
+        ownerEmail: "azureadmin@company.com",
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
+        lastScannedAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+        metadata: {
+          tenantId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+          location: "East US",
+          resourceGroups: 5,
+          environment: "production"
+        }
+      };
+      await this.createCloudAccount(azureAccount1);
+      
       // Create sample resources
       const ec2Resource: InsertResource = {
         resourceId: "i-09a8d67b5e4c3f21d",
@@ -1154,82 +1206,7 @@ export class DatabaseStorage implements IStorage {
       };
       await this.createTimelineEvent(timeline6);
       
-      // Create sample cloud accounts
-      const awsAccount1: InsertCloudAccount = {
-        accountId: "123456789012",
-        provider: "aws",
-        name: "Production AWS Account",
-        status: "active",
-        ownerEmail: "cloud-admin@example.com",
-        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
-        lastScannedAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-        metadata: {
-          region: "us-east-1",
-          services: ["EC2", "S3", "RDS", "Lambda"],
-          tags: {
-            Environment: "Production",
-            BusinessUnit: "Engineering"
-          }
-        }
-      };
-      await this.createCloudAccount(awsAccount1);
-      
-      const awsAccount2: InsertCloudAccount = {
-        accountId: "098765432109",
-        provider: "aws",
-        name: "Development AWS Account",
-        status: "active",
-        ownerEmail: "dev-admin@example.com",
-        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
-        lastScannedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        metadata: {
-          region: "us-west-2",
-          services: ["EC2", "S3", "DynamoDB"],
-          tags: {
-            Environment: "Development",
-            BusinessUnit: "Engineering"
-          }
-        }
-      };
-      await this.createCloudAccount(awsAccount2);
-      
-      const azureAccount1: InsertCloudAccount = {
-        accountId: "f8d7c6b5-a4e3-9d2c-1b0a-9f8e7d6c5b4a",
-        provider: "azure",
-        name: "Azure Enterprise Subscription",
-        status: "active",
-        ownerEmail: "azure-admin@example.com",
-        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
-        lastScannedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-        metadata: {
-          location: "East US",
-          services: ["Virtual Machines", "Storage", "SQL Database"],
-          tags: {
-            Environment: "Production",
-            Department: "IT"
-          }
-        }
-      };
-      await this.createCloudAccount(azureAccount1);
-      
-      const azureAccount2: InsertCloudAccount = {
-        accountId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-        provider: "azure",
-        name: "Azure Dev/Test Subscription",
-        status: "active",
-        ownerEmail: "dev-azure@example.com",
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-        lastScannedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        metadata: {
-          location: "West Europe",
-          services: ["Virtual Machines", "App Service", "Cosmos DB"],
-          tags: {
-            Environment: "Development",
-            Department: "Research"
-          }
-        }
-      };
-      await this.createCloudAccount(azureAccount2);
+      // Skip cloud accounts as they are defined above
       
       // Compliance Standards
       const nistStandard: InsertComplianceStandard = {

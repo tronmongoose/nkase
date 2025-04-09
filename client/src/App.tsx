@@ -7,6 +7,7 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Accounts from "@/pages/Accounts";
 import Compliance from "@/pages/Compliance";
+import CISODashboard from "@/pages/CISODashboard";
 import NotFound from "@/pages/not-found";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
@@ -57,6 +58,7 @@ function AppContent() {
                 <Route path="/resources" component={Resources} />
                 <Route path="/accounts" component={Accounts} />
                 <Route path="/compliance" component={Compliance} />
+                <Route path="/ciso-dashboard" component={CISODashboard} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/:rest*" component={NotFound} />

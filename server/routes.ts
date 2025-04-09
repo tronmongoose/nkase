@@ -2,6 +2,8 @@ import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { and, ne } from "drizzle-orm";
+import { db } from "./db";
 import { 
   insertIncidentSchema,
   insertResourceSchema,
@@ -9,7 +11,8 @@ import {
   insertCloudAccountSchema,
   insertComplianceStandardSchema,
   insertComplianceRuleSchema,
-  insertResourceComplianceSchema
+  insertResourceComplianceSchema,
+  resourceCompliance
 } from "@shared/schema";
 import { predictIncidentSeverity } from "./services/aiPredictor";
 
@@ -493,6 +496,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error(`Error calculating account compliance:`, error);
       res.status(500).json({ message: "Failed to calculate account compliance" });
+    }
+  });
+  
+  // CISO Dashboard APIs
+  
+  // Get compliance summary for CISO dashboard
+  apiRouter.get("/compliance/summary", async (req: Request, res: Response) => {
+    try {
+      // Get total counts of compliant and non-compliant resources
+      const allRules = await storage.getComplianceRules();
+      const allResources = await storage.getResources();
+      const allAccounts = await storage.getCloudAccounts();
+      const allStandards = await storage.getComplianceStandards();
+      
+      // Calculate non-compliant resources by provider
+      const nonCompliantByProvider: Record<string, number> = {
+        aws: 0,
+        azure: 0,
+        gcp: 0
+      };
+      
+      // Calculate non-compliant resources by severity
+      const nonCompliantBySeverity: Record<string, number> = {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+      };
+      
+      // Calculate auto-enforced rules
+      const enforceRules = allRules.filter(rule => rule.action === "enforce");
+      const enforceRulesByStandard: Record<string, number> = {};
+      allStandards.forEach(standard => {
+        enforceRulesByStandard[standard.name] = enforceRules.filter(rule => rule.standardId === standard.id).length;
+      });
+      
+      // Get all non-compliant resource records
+      const resourceComplianceRecords = await db.select().from(resourceCompliance).where(
+        and(
+          ne(resourceCompliance.status, "compliant"),
+          ne(resourceCompliance.status, "not_applicable"),
+          ne(resourceCompliance.status, "exempted")
+        )
+      );
+      
+      // Count resources by provider (based on the resources)
+      const resourcesByProvider = allResources.reduce((acc, resource) => {
+        // Check if the resource is non-compliant
+        const isNonCompliant = resourceComplianceRecords.some(
+          record => record.resourceId === resource.id
+        );
+        
+        if (isNonCompliant) {
+          // Determine provider based on metadata or other fields
+          let provider = "aws"; // Default
+          if (resource.metadata && typeof resource.metadata === 'object' && 'provider' in resource.metadata) {
+            provider = (resource.metadata.provider as string).toLowerCase();
+          } else if (resource.resourceId.includes('azure')) {
+            provider = "azure";
+          } else if (resource.resourceId.includes('gcp')) {
+            provider = "gcp";
+          }
+          
+          if (nonCompliantByProvider[provider] !== undefined) {
+            nonCompliantByProvider[provider]++;
+          }
+        }
+        
+        return acc;
+      }, nonCompliantByProvider);
+      
+      // Count non-compliant resources by severity of the rule
+      for (const record of resourceComplianceRecords) {
+        const rule = allRules.find(r => r.id === record.ruleId);
+        if (rule && nonCompliantBySeverity[rule.severity] !== undefined) {
+          nonCompliantBySeverity[rule.severity]++;
+        }
+      }
+      
+      // Get enforcement coverage by account
+      const accountEnforcement: Array<{
+        accountId: string;
+        accountName: string;
+        provider: string;
+        enforceRulesCount: number;
+        totalRulesCount: number;
+        enforcementPercentage: number;
+      }> = [];
+      
+      for (const account of allAccounts) {
+        // For this account, count the rules that are set to enforce
+        const applicableRules = allRules.filter(rule => {
+          if (!rule.providers || rule.providers.length === 0) return true;
+          return rule.providers.includes(account.provider);
+        });
+        
+        const enforceRulesForAccount = applicableRules.filter(rule => rule.action === "enforce");
+        
+        accountEnforcement.push({
+          accountId: account.accountId,
+          accountName: account.name,
+          provider: account.provider,
+          enforceRulesCount: enforceRulesForAccount.length,
+          totalRulesCount: applicableRules.length,
+          enforcementPercentage: applicableRules.length > 0 
+            ? (enforceRulesForAccount.length / applicableRules.length) * 100 
+            : 0
+        });
+      }
+      
+      // Calculate total compliance metrics
+      const totalResources = allResources.length;
+      const totalNonCompliantResources = new Set(
+        resourceComplianceRecords.map(record => record.resourceId)
+      ).size;
+      
+      const response = {
+        totalResources,
+        compliantResources: totalResources - totalNonCompliantResources,
+        nonCompliantResources: totalNonCompliantResources,
+        compliancePercentage: totalResources > 0 
+          ? ((totalResources - totalNonCompliantResources) / totalResources) * 100 
+          : 100,
+        nonCompliantByProvider,
+        nonCompliantBySeverity,
+        enforceRulesByStandard,
+        accountEnforcement,
+        totalEnforceRules: enforceRules.length,
+        totalRules: allRules.length
+      };
+      
+      return res.json(response);
+    } catch (error) {
+      console.error("Error fetching compliance summary:", error);
+      return res.status(500).json({ message: "Failed to fetch compliance summary" });
     }
   });
 
