@@ -70,6 +70,8 @@ app.use((req, res, next) => {
     try {
       // Seed initial data to database
       await storage.seedData();
+      // Also seed compliance data (this runs independently)
+      await storage.seedComplianceData();
     } catch (error) {
       log(`Error seeding database: ${error}`, "database");
     }

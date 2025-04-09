@@ -754,6 +754,228 @@ export class DatabaseStorage implements IStorage {
     return result || undefined;
   }
   
+  // Method to seed compliance data separately
+  async seedComplianceData() {
+    // Check if compliance standards table is empty
+    const standardsCount = await db.select().from(complianceStandards);
+    if (standardsCount.length === 0) {
+      console.log("Seeding compliance data...");
+      
+      // Compliance Standards
+      const nistStandard: InsertComplianceStandard = {
+        name: "nist_800_53",
+        displayName: "NIST 800-53",
+        description: "Security and Privacy Controls for Federal Information Systems and Organizations, providing a catalog of security and privacy controls for all US federal information systems except those related to national security.",
+        version: "Rev. 5",
+        category: "Federal",
+        link: "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final",
+        enabled: true
+      };
+      const nistStandardCreated = await this.createComplianceStandard(nistStandard);
+      
+      const pciStandard: InsertComplianceStandard = {
+        name: "pci_dss",
+        displayName: "PCI DSS",
+        description: "Payment Card Industry Data Security Standard, a set of security standards designed to ensure that ALL companies that accept, process, store or transmit credit card information maintain a secure environment.",
+        version: "4.0",
+        category: "Industry",
+        link: "https://www.pcisecuritystandards.org/",
+        enabled: true
+      };
+      const pciStandardCreated = await this.createComplianceStandard(pciStandard);
+      
+      const hipaaStandard: InsertComplianceStandard = {
+        name: "hipaa",
+        displayName: "HIPAA",
+        description: "Health Insurance Portability and Accountability Act, which establishes national standards for protecting sensitive patient health information from being disclosed without the patient's consent or knowledge.",
+        version: "2023",
+        category: "Healthcare",
+        link: "https://www.hhs.gov/hipaa/",
+        enabled: true
+      };
+      const hipaaStandardCreated = await this.createComplianceStandard(hipaaStandard);
+      
+      // Compliance Rules for NIST
+      const nistRule1: InsertComplianceRule = {
+        standardId: nistStandardCreated.id,
+        ruleId: "NIST-AC-3",
+        title: "Access Enforcement",
+        description: "The system must enforce approved authorizations for logical access to information and system resources in accordance with applicable access control policies.",
+        severity: "high",
+        resourceTypes: ["EC2", "IAM"],
+        action: "enforce",
+        remediationSteps: "Implement proper IAM policies and security groups to restrict access to resources based on least privilege principles.",
+        enabled: true,
+        providers: ["aws", "azure"]
+      };
+      await this.createComplianceRule(nistRule1);
+      
+      const nistRule2: InsertComplianceRule = {
+        standardId: nistStandardCreated.id,
+        ruleId: "NIST-AC-17",
+        title: "Remote Access",
+        description: "The system must enforce requirements for remote connections to the information system.",
+        severity: "high",
+        resourceTypes: ["EC2", "VPC", "SecurityGroup"],
+        action: "enforce",
+        remediationSteps: "Ensure that all remote access to systems requires multi-factor authentication and encrypted communications.",
+        enabled: true,
+        providers: ["aws", "azure", "gcp"]
+      };
+      await this.createComplianceRule(nistRule2);
+      
+      const nistRule3: InsertComplianceRule = {
+        standardId: nistStandardCreated.id,
+        ruleId: "NIST-CP-9",
+        title: "System Backup",
+        description: "The organization must conduct backups of system-level information, system documentation, and user-level information.",
+        severity: "medium",
+        resourceTypes: ["EC2", "RDS", "S3"],
+        action: "notify",
+        remediationSteps: "Configure automated backups for all critical systems and data with appropriate retention periods.",
+        enabled: true,
+        providers: ["aws", "azure"]
+      };
+      await this.createComplianceRule(nistRule3);
+      
+      // Compliance Rules for PCI DSS
+      const pciRule1: InsertComplianceRule = {
+        standardId: pciStandardCreated.id,
+        ruleId: "PCI-1.3.2",
+        title: "Public Access Restriction",
+        description: "Restrict inbound Internet traffic to Internet-facing systems and prohibit direct public access between the Internet and any system component in the cardholder data environment.",
+        severity: "critical",
+        resourceTypes: ["EC2", "SecurityGroup", "LoadBalancer"],
+        action: "enforce",
+        remediationSteps: "Implement firewalls and security groups to restrict traffic between public internet and systems containing cardholder data.",
+        enabled: true,
+        providers: ["aws", "azure"]
+      };
+      await this.createComplianceRule(pciRule1);
+      
+      const pciRule2: InsertComplianceRule = {
+        standardId: pciStandardCreated.id,
+        ruleId: "PCI-3.4",
+        title: "PAN Storage Protection",
+        description: "Render primary account numbers (PAN) unreadable anywhere they are stored by using strong cryptography.",
+        severity: "critical",
+        resourceTypes: ["S3", "RDS", "DynamoDB"],
+        action: "enforce",
+        remediationSteps: "Implement encryption for all storage services that may contain cardholder data. Enable encryption at rest and in transit.",
+        enabled: true,
+        providers: ["aws", "azure", "gcp"]
+      };
+      await this.createComplianceRule(pciRule2);
+      
+      const pciRule3: InsertComplianceRule = {
+        standardId: pciStandardCreated.id,
+        ruleId: "PCI-10.5.3",
+        title: "Audit Trail Protection",
+        description: "Promptly back up audit trail files to a centralized log server or media that is difficult to alter.",
+        severity: "high",
+        resourceTypes: ["CloudTrail", "CloudWatch", "EventHub"],
+        action: "notify",
+        remediationSteps: "Configure CloudTrail logs to be delivered to a dedicated S3 bucket with appropriate access controls and encryption.",
+        enabled: true,
+        providers: ["aws", "azure"]
+      };
+      await this.createComplianceRule(pciRule3);
+      
+      // Compliance Rules for HIPAA
+      const hipaaRule1: InsertComplianceRule = {
+        standardId: hipaaStandardCreated.id,
+        ruleId: "HIPAA-164.312(a)(1)",
+        title: "Access Control",
+        description: "Implement technical policies and procedures for electronic information systems that maintain electronic protected health information to allow access only to authorized persons or software programs.",
+        severity: "high",
+        resourceTypes: ["EC2", "IAM", "S3"],
+        action: "enforce",
+        remediationSteps: "Implement role-based access control and principle of least privilege for all systems containing PHI.",
+        enabled: true,
+        providers: ["aws", "azure", "gcp"]
+      };
+      await this.createComplianceRule(hipaaRule1);
+      
+      const hipaaRule2: InsertComplianceRule = {
+        standardId: hipaaStandardCreated.id,
+        ruleId: "HIPAA-164.312(e)(1)",
+        title: "Transmission Security",
+        description: "Implement technical security measures to guard against unauthorized access to electronic protected health information that is being transmitted over an electronic communications network.",
+        severity: "high",
+        resourceTypes: ["EC2", "LoadBalancer", "API"],
+        action: "enforce",
+        remediationSteps: "Ensure all data transmissions are encrypted using TLS 1.2 or higher. Configure load balancers to enforce HTTPS.",
+        enabled: true,
+        providers: ["aws", "azure"]
+      };
+      await this.createComplianceRule(hipaaRule2);
+      
+      // Resource Compliance Records (some non-compliant examples)
+      await this.createResourceCompliance({
+        resourceId: 1, // EC2 resource
+        ruleId: 6, // PCI-1.3.2
+        status: "non_compliant",
+        lastChecked: new Date(),
+        details: {
+          reason: "Public security group allows unrestricted access on port 22"
+        }
+      });
+      
+      await this.createResourceCompliance({
+        resourceId: 1, // EC2 resource
+        ruleId: 1, // NIST-AC-3
+        status: "non_compliant",
+        lastChecked: new Date(),
+        details: {
+          reason: "Instance has overly permissive IAM role attached"
+        }
+      });
+      
+      await this.createResourceCompliance({
+        resourceId: 3, // IAM resource
+        ruleId: 7, // HIPAA-164.312(a)(1)
+        status: "non_compliant",
+        lastChecked: new Date(),
+        details: {
+          reason: "IAM policy grants excessive privileges"
+        }
+      });
+      
+      // Also add some compliant records
+      await this.createResourceCompliance({
+        resourceId: 2, // S3 resource
+        ruleId: 5, // PCI-3.4
+        status: "compliant",
+        lastChecked: new Date(),
+        details: {
+          notes: "Encryption at rest is enabled"
+        }
+      });
+      
+      await this.createResourceCompliance({
+        resourceId: 4, // Lambda resource
+        ruleId: 3, // NIST-CP-9
+        status: "compliant",
+        lastChecked: new Date(),
+        details: {
+          notes: "Function code is versioned properly"
+        }
+      });
+      
+      // Account compliance calculations
+      const accounts = await db.select().from(cloudAccounts);
+      if (accounts.length > 0) {
+        await this.calculateAccountCompliance(accounts[0].id, nistStandardCreated.id);
+        await this.calculateAccountCompliance(accounts[0].id, pciStandardCreated.id);
+        if (accounts.length > 2) {
+          await this.calculateAccountCompliance(accounts[2].id, hipaaStandardCreated.id);
+        }
+      }
+      
+      console.log("Compliance data seeding completed successfully.");
+    }
+  }
+  
   // Seed method to initialize database with sample data
   async seedData() {
     // Check if users table is empty
