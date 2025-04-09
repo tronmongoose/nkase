@@ -3,6 +3,7 @@ import {
   incidents, type Incident, type InsertIncident,
   resources, type Resource, type InsertResource,
   timelineEvents, type TimelineEvent, type InsertTimelineEvent,
+  resourceLogs, type ResourceLog, type InsertResourceLog,
   cloudAccounts, type CloudAccount, type InsertCloudAccount,
   complianceStandards, type ComplianceStandard, type InsertComplianceStandard,
   complianceRules, type ComplianceRule, type InsertComplianceRule,
@@ -10,7 +11,7 @@ import {
   accountCompliance, type AccountCompliance, type InsertAccountCompliance
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gt, like, or } from "drizzle-orm";
+import { eq, and, desc, gt, lt, like, or } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -44,6 +45,15 @@ export interface IStorage {
   // Timeline operations
   getTimelineEvents(incidentId: number): Promise<TimelineEvent[]>;
   createTimelineEvent(event: InsertTimelineEvent): Promise<TimelineEvent>;
+  
+  // Resource Log operations
+  getResourceLogs(resourceId: number, filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    actionType?: string;
+    region?: string;
+  }): Promise<ResourceLog[]>;
+  createResourceLog(log: InsertResourceLog): Promise<ResourceLog>;
   
   // Cloud Account operations
   getCloudAccount(id: number): Promise<CloudAccount | undefined>;
@@ -292,6 +302,62 @@ export class DatabaseStorage implements IStorage {
     }).returning();
     
     return event;
+  }
+  
+  // Resource Log operations
+  async getResourceLogs(resourceId: number, filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    actionType?: string;
+    region?: string;
+  }): Promise<ResourceLog[]> {
+    // Query all logs for the resource first
+    const allLogs = await db.select()
+      .from(resourceLogs)
+      .where(eq(resourceLogs.resourceId, resourceId))
+      .orderBy(desc(resourceLogs.timestamp));
+    
+    // If no filters, return all logs
+    if (!filters) {
+      return allLogs;
+    }
+    
+    // Apply filters in memory (safer than SQL for date filtering with Drizzle)
+    return allLogs.filter(log => {
+      const logDate = new Date(log.timestamp);
+      
+      // Filter by start date
+      if (filters.startDate && logDate < filters.startDate) {
+        return false;
+      }
+      
+      // Filter by end date
+      if (filters.endDate && logDate > filters.endDate) {
+        return false;
+      }
+      
+      // Filter by actionType
+      if (filters.actionType && log.actionType !== filters.actionType) {
+        return false;
+      }
+      
+      // Filter by region
+      if (filters.region && log.region !== filters.region) {
+        return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  async createResourceLog(insertLog: InsertResourceLog): Promise<ResourceLog> {
+    const [log] = await db.insert(resourceLogs).values({
+      ...insertLog,
+      // Ensure timestamp exists
+      timestamp: insertLog.timestamp || new Date()
+    }).returning();
+    
+    return log;
   }
   
   // Cloud Account operations

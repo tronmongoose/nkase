@@ -8,6 +8,7 @@ import {
   insertIncidentSchema,
   insertResourceSchema,
   insertTimelineEventSchema,
+  insertResourceLogSchema,
   insertCloudAccountSchema,
   insertComplianceStandardSchema,
   insertComplianceRuleSchema,
@@ -154,6 +155,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(resource);
     } catch (error) {
       return res.status(400).json({ message: "Invalid update data", error });
+    }
+  });
+  
+  // Resource logs
+  apiRouter.get("/resources/:id/logs", async (req: Request, res: Response) => {
+    const resourceId = parseInt(req.params.id);
+    if (isNaN(resourceId)) {
+      return res.status(400).json({ message: "Invalid resource ID" });
+    }
+    
+    // Parse date strings to Date objects for filtering
+    let startDate: Date | undefined = undefined;
+    let endDate: Date | undefined = undefined;
+    
+    if (req.query.startDate) {
+      try {
+        startDate = new Date(req.query.startDate as string);
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid start date format" });
+      }
+    }
+    
+    if (req.query.endDate) {
+      try {
+        endDate = new Date(req.query.endDate as string);
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid end date format" });
+      }
+    }
+    
+    const actionType = req.query.actionType as string | undefined;
+    const region = req.query.region as string | undefined;
+    
+    try {
+      const logs = await storage.getResourceLogs(resourceId, {
+        startDate,
+        endDate,
+        actionType,
+        region
+      });
+      
+      return res.json(logs);
+    } catch (error) {
+      console.error(`Error fetching resource logs:`, error);
+      return res.status(500).json({ message: "Failed to fetch resource logs" });
+    }
+  });
+  
+  apiRouter.post("/resources/:id/logs", async (req: Request, res: Response) => {
+    const resourceId = parseInt(req.params.id);
+    if (isNaN(resourceId)) {
+      return res.status(400).json({ message: "Invalid resource ID" });
+    }
+    
+    try {
+      // Pre-process the timestamp if it exists as a string
+      const requestData = { ...req.body, resourceId };
+      if (typeof requestData.timestamp === 'string') {
+        requestData.timestamp = new Date(requestData.timestamp);
+      }
+      
+      const logData = insertResourceLogSchema.parse(requestData);
+      
+      const log = await storage.createResourceLog(logData);
+      return res.status(201).json(log);
+    } catch (error) {
+      console.error(`Error creating resource log:`, error);
+      return res.status(400).json({ message: "Invalid resource log data", error });
     }
   });
   

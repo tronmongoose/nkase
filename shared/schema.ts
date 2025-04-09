@@ -96,6 +96,32 @@ export const insertTimelineEventSchema = createInsertSchema(timelineEvents).pick
   severity: true,
 });
 
+// Resource logs schema
+export const resourceLogs = pgTable("resource_logs", {
+  id: serial("id").primaryKey(),
+  resourceId: integer("resource_id").references(() => resources.id).notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  actionType: text("action_type").notNull(), // create, update, delete, access, etc
+  affectedResource: text("affected_resource"), // ID of a resource that was affected by this action (if any)
+  actor: text("actor").notNull(), // IAM user, role, or service that performed the action
+  sourceIp: text("source_ip"), // IP address where the action originated
+  userAgent: text("user_agent"), // User agent that performed the action
+  details: jsonb("details"), // Additional context of the log event
+  region: text("region").notNull(),
+});
+
+export const insertResourceLogSchema = createInsertSchema(resourceLogs).pick({
+  resourceId: true,
+  timestamp: true,
+  actionType: true,
+  affectedResource: true,
+  actor: true,
+  sourceIp: true,
+  userAgent: true,
+  details: true,
+  region: true,
+});
+
 // Cloud Account schema
 export const cloudAccounts = pgTable("cloud_accounts", {
   id: serial("id").primaryKey(),
@@ -132,6 +158,9 @@ export type InsertResource = z.infer<typeof insertResourceSchema>;
 
 export type TimelineEvent = typeof timelineEvents.$inferSelect;
 export type InsertTimelineEvent = z.infer<typeof insertTimelineEventSchema>;
+
+export type ResourceLog = typeof resourceLogs.$inferSelect;
+export type InsertResourceLog = z.infer<typeof insertResourceLogSchema>;
 
 // Compliance Standard schema
 export const complianceStandards = pgTable("compliance_standards", {
