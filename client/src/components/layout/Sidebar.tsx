@@ -9,7 +9,8 @@ import {
   Home, 
   Moon, 
   Sun,
-  Cloud
+  Cloud,
+  ShieldCheck
 } from "lucide-react";
 
 interface SidebarProps {
@@ -51,6 +52,7 @@ export const Sidebar = ({ isOpen, onRoleSwitch }: SidebarProps) => {
     { icon: <Bell className="h-5 w-5 mr-2" />, name: "Incident Dashboard", path: "/" , activePaths: ["/", "/incidents"]},
     { icon: <FileText className="h-5 w-5 mr-2" />, name: "Resources", path: "/resources" },
     { icon: <Cloud className="h-5 w-5 mr-2" />, name: "Cloud Accounts", path: "/accounts" },
+    { icon: <ShieldCheck className="h-5 w-5 mr-2" />, name: "Compliance", path: "/compliance" },
     { icon: <BarChart3 className="h-5 w-5 mr-2" />, name: "Reports", path: "/reports" },
     { icon: <Cog className="h-5 w-5 mr-2" />, name: "Settings", path: "/settings" },
   ];

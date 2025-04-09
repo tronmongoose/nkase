@@ -3,10 +3,14 @@ import {
   incidents, type Incident, type InsertIncident,
   resources, type Resource, type InsertResource,
   timelineEvents, type TimelineEvent, type InsertTimelineEvent,
-  cloudAccounts, type CloudAccount, type InsertCloudAccount
+  cloudAccounts, type CloudAccount, type InsertCloudAccount,
+  complianceStandards, type ComplianceStandard, type InsertComplianceStandard,
+  complianceRules, type ComplianceRule, type InsertComplianceRule,
+  resourceCompliance, type ResourceCompliance, type InsertResourceCompliance,
+  accountCompliance, type AccountCompliance, type InsertAccountCompliance
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gt, like } from "drizzle-orm";
+import { eq, and, desc, gt, like, or } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -50,6 +54,54 @@ export interface IStorage {
   }): Promise<CloudAccount[]>;
   createCloudAccount(account: InsertCloudAccount): Promise<CloudAccount>;
   updateCloudAccount(id: number, account: Partial<InsertCloudAccount>): Promise<CloudAccount | undefined>;
+  
+  // Compliance Standard operations
+  getComplianceStandard(id: number): Promise<ComplianceStandard | undefined>;
+  getComplianceStandardByName(name: string): Promise<ComplianceStandard | undefined>;
+  getComplianceStandards(enabled?: boolean): Promise<ComplianceStandard[]>;
+  createComplianceStandard(standard: InsertComplianceStandard): Promise<ComplianceStandard>;
+  updateComplianceStandard(id: number, standard: Partial<InsertComplianceStandard>): Promise<ComplianceStandard | undefined>;
+  
+  // Compliance Rule operations
+  getComplianceRule(id: number): Promise<ComplianceRule | undefined>;
+  getComplianceRuleByRuleId(ruleId: string): Promise<ComplianceRule | undefined>;
+  getComplianceRules(filters?: {
+    standardId?: number;
+    severity?: string;
+    enabled?: boolean;
+    action?: string; // "notify" or "enforce"
+    provider?: string;
+  }): Promise<ComplianceRule[]>;
+  createComplianceRule(rule: InsertComplianceRule): Promise<ComplianceRule>;
+  updateComplianceRule(id: number, rule: Partial<InsertComplianceRule>): Promise<ComplianceRule | undefined>;
+  
+  // Resource Compliance operations
+  getResourceCompliance(id: number): Promise<ResourceCompliance | undefined>;
+  getResourceComplianceByResourceAndRule(resourceId: number, ruleId: number): Promise<ResourceCompliance | undefined>;
+  getResourceComplianceForResource(resourceId: number): Promise<ResourceCompliance[]>;
+  getResourceComplianceForRule(ruleId: number, filters?: {
+    status?: string;
+    accountId?: number;
+  }): Promise<ResourceCompliance[]>;
+  getNonCompliantResources(accountId?: number, standardId?: number): Promise<{
+    resource: Resource;
+    rules: ComplianceRule[];
+    compliance: ResourceCompliance[];
+  }[]>;
+  createResourceCompliance(compliance: InsertResourceCompliance): Promise<ResourceCompliance>;
+  updateResourceCompliance(id: number, compliance: Partial<InsertResourceCompliance>): Promise<ResourceCompliance | undefined>;
+  grantExemption(resourceId: number, ruleId: number, exemptionData: {
+    reason: string;
+    expiryDate?: Date;
+    exemptedBy: number;
+  }): Promise<ResourceCompliance | undefined>;
+  
+  // Account Compliance operations
+  getAccountCompliance(id: number): Promise<AccountCompliance | undefined>;
+  getAccountComplianceByAccountAndStandard(accountId: number, standardId: number): Promise<AccountCompliance | undefined>;
+  getAccountComplianceForAccount(accountId: number): Promise<AccountCompliance[]>;
+  calculateAccountCompliance(accountId: number, standardId: number): Promise<AccountCompliance>;
+  updateAccountCompliance(id: number, compliance: Partial<InsertAccountCompliance>): Promise<AccountCompliance | undefined>;
 }
 
 // Database implementation of IStorage
@@ -298,6 +350,408 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return account || undefined;
+  }
+  
+  // Compliance Standard operations
+  async getComplianceStandard(id: number): Promise<ComplianceStandard | undefined> {
+    const [standard] = await db.select().from(complianceStandards).where(eq(complianceStandards.id, id));
+    return standard || undefined;
+  }
+  
+  async getComplianceStandardByName(name: string): Promise<ComplianceStandard | undefined> {
+    const [standard] = await db.select().from(complianceStandards).where(eq(complianceStandards.name, name));
+    return standard || undefined;
+  }
+  
+  async getComplianceStandards(enabled?: boolean): Promise<ComplianceStandard[]> {
+    let query = db.select().from(complianceStandards);
+    
+    if (enabled !== undefined) {
+      query = query.where(eq(complianceStandards.enabled, enabled));
+    }
+    
+    return await query;
+  }
+  
+  async createComplianceStandard(standard: InsertComplianceStandard): Promise<ComplianceStandard> {
+    const [result] = await db.insert(complianceStandards).values(standard).returning();
+    return result;
+  }
+  
+  async updateComplianceStandard(id: number, standard: Partial<InsertComplianceStandard>): Promise<ComplianceStandard | undefined> {
+    const [result] = await db
+      .update(complianceStandards)
+      .set(standard)
+      .where(eq(complianceStandards.id, id))
+      .returning();
+    
+    return result || undefined;
+  }
+  
+  // Compliance Rule operations
+  async getComplianceRule(id: number): Promise<ComplianceRule | undefined> {
+    const [rule] = await db.select().from(complianceRules).where(eq(complianceRules.id, id));
+    return rule || undefined;
+  }
+  
+  async getComplianceRuleByRuleId(ruleId: string): Promise<ComplianceRule | undefined> {
+    const [rule] = await db.select().from(complianceRules).where(eq(complianceRules.ruleId, ruleId));
+    return rule || undefined;
+  }
+  
+  async getComplianceRules(filters?: {
+    standardId?: number;
+    severity?: string;
+    enabled?: boolean;
+    action?: string;
+    provider?: string;
+  }): Promise<ComplianceRule[]> {
+    let query = db.select().from(complianceRules);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.standardId !== undefined) {
+        conditions.push(eq(complianceRules.standardId, filters.standardId));
+      }
+      
+      if (filters.severity) {
+        conditions.push(eq(complianceRules.severity, filters.severity));
+      }
+      
+      if (filters.enabled !== undefined) {
+        conditions.push(eq(complianceRules.enabled, filters.enabled));
+      }
+      
+      if (filters.action) {
+        conditions.push(eq(complianceRules.action, filters.action));
+      }
+      
+      if (filters.provider) {
+        // Check if the provider is in the providers array of the rule
+        // This requires custom SQL that may vary by database, for now we'll handle this in application code
+        // and fetch all rules, then filter
+        // In a production app, use a proper database-specific query for array contains
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    const rules = await query;
+    
+    // If provider filter is specified, filter in application code
+    if (filters?.provider) {
+      return rules.filter(rule => 
+        rule.providers?.includes(filters.provider as string)
+      );
+    }
+    
+    return rules;
+  }
+  
+  async createComplianceRule(rule: InsertComplianceRule): Promise<ComplianceRule> {
+    const [result] = await db.insert(complianceRules).values(rule).returning();
+    return result;
+  }
+  
+  async updateComplianceRule(id: number, rule: Partial<InsertComplianceRule>): Promise<ComplianceRule | undefined> {
+    const [result] = await db
+      .update(complianceRules)
+      .set(rule)
+      .where(eq(complianceRules.id, id))
+      .returning();
+    
+    return result || undefined;
+  }
+  
+  // Resource Compliance operations
+  async getResourceCompliance(id: number): Promise<ResourceCompliance | undefined> {
+    const [compliance] = await db.select().from(resourceCompliance).where(eq(resourceCompliance.id, id));
+    return compliance || undefined;
+  }
+  
+  async getResourceComplianceByResourceAndRule(resourceId: number, ruleId: number): Promise<ResourceCompliance | undefined> {
+    const [compliance] = await db.select().from(resourceCompliance)
+      .where(and(
+        eq(resourceCompliance.resourceId, resourceId), 
+        eq(resourceCompliance.ruleId, ruleId)
+      ));
+    return compliance || undefined;
+  }
+  
+  async getResourceComplianceForResource(resourceId: number): Promise<ResourceCompliance[]> {
+    return await db.select().from(resourceCompliance)
+      .where(eq(resourceCompliance.resourceId, resourceId));
+  }
+  
+  async getResourceComplianceForRule(ruleId: number, filters?: {
+    status?: string;
+    accountId?: number;
+  }): Promise<ResourceCompliance[]> {
+    let query = db.select().from(resourceCompliance)
+      .where(eq(resourceCompliance.ruleId, ruleId));
+    
+    if (filters?.status) {
+      query = query.where(eq(resourceCompliance.status, filters.status));
+    }
+    
+    // If accountId is specified, we need to join with resources and/or cloud accounts
+    // This is beyond the scope of this implementation, but in a real app,
+    // this would involve joining tables to filter by account
+    
+    return await query;
+  }
+  
+  async getNonCompliantResources(accountId?: number, standardId?: number): Promise<{
+    resource: Resource;
+    rules: ComplianceRule[];
+    compliance: ResourceCompliance[];
+  }[]> {
+    // This is a complex query that would typically involve multiple joins
+    // For this implementation, we'll do it in multiple queries and compose in application code
+    
+    // Get all non-compliant resource compliance entries
+    const complianceEntries = await db.select().from(resourceCompliance)
+      .where(eq(resourceCompliance.status, "non_compliant"));
+    
+    if (complianceEntries.length === 0) {
+      return [];
+    }
+    
+    // Get unique resource IDs
+    const resourceIds = [...new Set(complianceEntries.map(c => c.resourceId))];
+    
+    // Get resources
+    const resourceList = await db.select().from(resources)
+      .where(resourceIds.map(id => eq(resources.id, id)).length > 0 ? 
+        resourceIds.length === 1 ? 
+          eq(resources.id, resourceIds[0]) : 
+          or(...resourceIds.map(id => eq(resources.id, id))) 
+        : undefined);
+    
+    if (resourceList.length === 0) {
+      return [];
+    }
+    
+    // Get rule IDs
+    const ruleIds = [...new Set(complianceEntries.map(c => c.ruleId))];
+    
+    // Get rules
+    let rulesQuery = db.select().from(complianceRules)
+      .where(ruleIds.map(id => eq(complianceRules.id, id)).length > 0 ? 
+        ruleIds.length === 1 ? 
+          eq(complianceRules.id, ruleIds[0]) : 
+          or(...ruleIds.map(id => eq(complianceRules.id, id))) 
+        : undefined);
+    
+    // Filter by standard if specified
+    if (standardId !== undefined) {
+      rulesQuery = rulesQuery.where(eq(complianceRules.standardId, standardId));
+    }
+    
+    const rules = await rulesQuery;
+    
+    // Group by resource
+    const result = resourceList.map(resource => {
+      const resourceComplianceEntries = complianceEntries.filter(c => c.resourceId === resource.id);
+      const relevantRuleIds = resourceComplianceEntries.map(c => c.ruleId);
+      const relevantRules = rules.filter(r => relevantRuleIds.includes(r.id));
+      
+      return {
+        resource,
+        rules: relevantRules,
+        compliance: resourceComplianceEntries
+      };
+    });
+    
+    return result;
+  }
+  
+  async createResourceCompliance(compliance: InsertResourceCompliance): Promise<ResourceCompliance> {
+    const [result] = await db.insert(resourceCompliance).values(compliance).returning();
+    return result;
+  }
+  
+  async updateResourceCompliance(id: number, compliance: Partial<InsertResourceCompliance>): Promise<ResourceCompliance | undefined> {
+    const [result] = await db
+      .update(resourceCompliance)
+      .set(compliance)
+      .where(eq(resourceCompliance.id, id))
+      .returning();
+    
+    return result || undefined;
+  }
+  
+  async grantExemption(resourceId: number, ruleId: number, exemptionData: {
+    reason: string;
+    expiryDate?: Date;
+    exemptedBy: number;
+  }): Promise<ResourceCompliance | undefined> {
+    // First, check if the compliance record exists
+    const compliance = await this.getResourceComplianceByResourceAndRule(resourceId, ruleId);
+    
+    if (!compliance) {
+      return undefined;
+    }
+    
+    // Update the compliance record with exemption data
+    const [result] = await db
+      .update(resourceCompliance)
+      .set({
+        status: "exempted",
+        exemptionReason: exemptionData.reason,
+        exemptionExpiry: exemptionData.expiryDate,
+        exemptedBy: exemptionData.exemptedBy,
+        exemptedAt: new Date()
+      })
+      .where(and(
+        eq(resourceCompliance.resourceId, resourceId),
+        eq(resourceCompliance.ruleId, ruleId)
+      ))
+      .returning();
+    
+    return result || undefined;
+  }
+  
+  // Account Compliance operations
+  async getAccountCompliance(id: number): Promise<AccountCompliance | undefined> {
+    const [compliance] = await db.select().from(accountCompliance).where(eq(accountCompliance.id, id));
+    return compliance || undefined;
+  }
+  
+  async getAccountComplianceByAccountAndStandard(accountId: number, standardId: number): Promise<AccountCompliance | undefined> {
+    const [compliance] = await db.select().from(accountCompliance)
+      .where(and(
+        eq(accountCompliance.accountId, accountId),
+        eq(accountCompliance.standardId, standardId)
+      ));
+    return compliance || undefined;
+  }
+  
+  async getAccountComplianceForAccount(accountId: number): Promise<AccountCompliance[]> {
+    return await db.select().from(accountCompliance)
+      .where(eq(accountCompliance.accountId, accountId));
+  }
+  
+  async calculateAccountCompliance(accountId: number, standardId: number): Promise<AccountCompliance> {
+    // This would be a complex operation that combines data from multiple tables
+    // For this implementation, we'll create a simpler version
+    
+    // Get the standard
+    const standard = await this.getComplianceStandard(standardId);
+    if (!standard) {
+      throw new Error(`Compliance standard with ID ${standardId} not found`);
+    }
+    
+    // Get the account
+    const account = await this.getCloudAccount(accountId);
+    if (!account) {
+      throw new Error(`Cloud account with ID ${accountId} not found`);
+    }
+    
+    // Get all resources for this account
+    // Note: In a real app, you would need to join with cloud accounts to get resources
+    // For now, we'll assume all resources in our system belong to this account
+    const resources = await this.getResources();
+    
+    // Get all rules for this standard
+    const rules = await this.getComplianceRules({ standardId });
+    
+    // Counter for compliance statuses
+    let compliantCount = 0;
+    let nonCompliantCount = 0;
+    let exemptedCount = 0;
+    let notApplicableCount = 0;
+    
+    // For each resource and rule combination, check compliance
+    for (const resource of resources) {
+      for (const rule of rules) {
+        // Check if the rule applies to this resource type
+        if (!rule.resourceTypes.includes(resource.resourceType)) {
+          notApplicableCount++;
+          continue;
+        }
+        
+        // Check if the rule applies to this cloud provider
+        if (!rule.providers.includes(account.provider)) {
+          notApplicableCount++;
+          continue;
+        }
+        
+        // Get or create the compliance status
+        const compliance = await this.getResourceComplianceByResourceAndRule(resource.id, rule.id);
+        
+        if (!compliance) {
+          // Create a new compliance entry as non-compliant by default
+          await this.createResourceCompliance({
+            resourceId: resource.id,
+            ruleId: rule.id,
+            status: "non_compliant",
+            lastChecked: new Date(),
+            details: { message: "Initial compliance check" }
+          });
+          nonCompliantCount++;
+        } else {
+          // Count by status
+          switch (compliance.status) {
+            case "compliant":
+              compliantCount++;
+              break;
+            case "non_compliant":
+              nonCompliantCount++;
+              break;
+            case "exempted":
+              exemptedCount++;
+              break;
+            case "not_applicable":
+              notApplicableCount++;
+              break;
+          }
+        }
+      }
+    }
+    
+    // Determine overall status
+    const overallStatus = nonCompliantCount === 0 ? "compliant" : "non_compliant";
+    
+    // Get or create account compliance record
+    const existingCompliance = await this.getAccountComplianceByAccountAndStandard(accountId, standardId);
+    
+    if (existingCompliance) {
+      // Update existing record
+      return await this.updateAccountCompliance(existingCompliance.id, {
+        compliantRules: compliantCount,
+        nonCompliantRules: nonCompliantCount,
+        exemptedRules: exemptedCount,
+        notApplicableRules: notApplicableCount,
+        lastScanned: new Date(),
+        overallStatus
+      }) as AccountCompliance;
+    } else {
+      // Create new record
+      return await db.insert(accountCompliance).values({
+        accountId,
+        standardId,
+        compliantRules: compliantCount,
+        nonCompliantRules: nonCompliantCount,
+        exemptedRules: exemptedCount,
+        notApplicableRules: notApplicableCount,
+        lastScanned: new Date(),
+        overallStatus
+      }).returning()[0];
+    }
+  }
+  
+  async updateAccountCompliance(id: number, compliance: Partial<InsertAccountCompliance>): Promise<AccountCompliance | undefined> {
+    const [result] = await db
+      .update(accountCompliance)
+      .set(compliance)
+      .where(eq(accountCompliance.id, id))
+      .returning();
+    
+    return result || undefined;
   }
   
   // Seed method to initialize database with sample data

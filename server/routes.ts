@@ -6,7 +6,10 @@ import {
   insertIncidentSchema,
   insertResourceSchema,
   insertTimelineEventSchema,
-  insertCloudAccountSchema
+  insertCloudAccountSchema,
+  insertComplianceStandardSchema,
+  insertComplianceRuleSchema,
+  insertResourceComplianceSchema
 } from "@shared/schema";
 import { predictIncidentSeverity } from "./services/aiPredictor";
 
@@ -324,6 +327,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(account);
     } catch (error) {
       return res.status(400).json({ message: "Invalid update data", error });
+    }
+  });
+
+  // Compliance Management Routes
+  
+  // Compliance Standard routes
+  apiRouter.get("/compliance/standards", async (req: Request, res: Response) => {
+    try {
+      const enabled = req.query.enabled === 'true' ? true : 
+                    req.query.enabled === 'false' ? false : undefined;
+      const standards = await storage.getComplianceStandards(enabled);
+      res.json(standards);
+    } catch (error) {
+      console.error(`Error fetching compliance standards:`, error);
+      res.status(500).json({ message: "Failed to fetch compliance standards" });
+    }
+  });
+
+  apiRouter.get("/compliance/standards/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid standard ID" });
+      }
+      
+      const standard = await storage.getComplianceStandard(id);
+      if (!standard) {
+        return res.status(404).json({ message: "Compliance standard not found" });
+      }
+      res.json(standard);
+    } catch (error) {
+      console.error(`Error fetching compliance standard:`, error);
+      res.status(500).json({ message: "Failed to fetch compliance standard" });
+    }
+  });
+
+  // Compliance Rule routes
+  apiRouter.get("/compliance/rules", async (req: Request, res: Response) => {
+    try {
+      const filters: {
+        standardId?: number;
+        severity?: string;
+        enabled?: boolean;
+        action?: string;
+        provider?: string;
+      } = {};
+
+      if (req.query.standardId) {
+        filters.standardId = parseInt(req.query.standardId as string);
+      }
+
+      if (req.query.severity) {
+        filters.severity = req.query.severity as string;
+      }
+
+      if (req.query.enabled !== undefined) {
+        filters.enabled = req.query.enabled === 'true';
+      }
+
+      if (req.query.action) {
+        filters.action = req.query.action as string;
+      }
+
+      if (req.query.provider) {
+        filters.provider = req.query.provider as string;
+      }
+
+      const rules = await storage.getComplianceRules(filters);
+      res.json(rules);
+    } catch (error) {
+      console.error(`Error fetching compliance rules:`, error);
+      res.status(500).json({ message: "Failed to fetch compliance rules" });
+    }
+  });
+
+  apiRouter.get("/compliance/rules/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid rule ID" });
+      }
+      
+      const rule = await storage.getComplianceRule(id);
+      if (!rule) {
+        return res.status(404).json({ message: "Compliance rule not found" });
+      }
+      res.json(rule);
+    } catch (error) {
+      console.error(`Error fetching compliance rule:`, error);
+      res.status(500).json({ message: "Failed to fetch compliance rule" });
+    }
+  });
+
+  // Non-compliant resources
+  apiRouter.get("/compliance/non-compliant-resources", async (req: Request, res: Response) => {
+    try {
+      const accountId = req.query.accountId ? parseInt(req.query.accountId as string) : undefined;
+      const standardId = req.query.standardId ? parseInt(req.query.standardId as string) : undefined;
+      
+      const nonCompliantResources = await storage.getNonCompliantResources(accountId, standardId);
+      res.json(nonCompliantResources);
+    } catch (error) {
+      console.error(`Error fetching non-compliant resources:`, error);
+      res.status(500).json({ message: "Failed to fetch non-compliant resources" });
+    }
+  });
+
+  // Grant exemption for a resource-rule combination
+  apiRouter.post("/compliance/exemptions", async (req: Request, res: Response) => {
+    try {
+      const { resourceId, ruleId, reason, expiryDate, exemptedBy } = req.body;
+      
+      if (!resourceId || !ruleId || !reason || !exemptedBy) {
+        return res.status(400).json({ 
+          message: "Missing required fields. Please provide resourceId, ruleId, reason, and exemptedBy." 
+        });
+      }
+      
+      const exemption = await storage.grantExemption(
+        parseInt(resourceId), 
+        parseInt(ruleId), 
+        {
+          reason,
+          expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+          exemptedBy: parseInt(exemptedBy)
+        }
+      );
+      
+      if (!exemption) {
+        return res.status(404).json({ 
+          message: "Could not grant exemption. Either the resource or rule does not exist, or there is no compliance record for this combination." 
+        });
+      }
+      
+      res.json(exemption);
+    } catch (error) {
+      console.error(`Error granting exemption:`, error);
+      res.status(500).json({ message: "Failed to grant exemption" });
+    }
+  });
+
+  // Calculate compliance for an account and standard
+  apiRouter.get("/compliance/accounts/:accountId/standards/:standardId", async (req: Request, res: Response) => {
+    try {
+      const accountId = parseInt(req.params.accountId);
+      const standardId = parseInt(req.params.standardId);
+      
+      if (isNaN(accountId) || isNaN(standardId)) {
+        return res.status(400).json({ message: "Invalid account ID or standard ID" });
+      }
+      
+      const account = await storage.getCloudAccount(accountId);
+      if (!account) {
+        return res.status(404).json({ message: "Cloud account not found" });
+      }
+      
+      const standard = await storage.getComplianceStandard(standardId);
+      if (!standard) {
+        return res.status(404).json({ message: "Compliance standard not found" });
+      }
+      
+      const compliance = await storage.calculateAccountCompliance(accountId, standardId);
+      res.json(compliance);
+    } catch (error) {
+      console.error(`Error calculating account compliance:`, error);
+      res.status(500).json({ message: "Failed to calculate account compliance" });
     }
   });
 
